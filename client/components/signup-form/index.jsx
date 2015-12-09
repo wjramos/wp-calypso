@@ -22,9 +22,10 @@ import FormSettingExplanation from 'components/forms/form-setting-explanation'
 import FormTextInput from 'components/forms/form-text-input'
 import FormButton from 'components/forms/form-button'
 import notices from 'notices'
-import Notice from 'notices/notice'
+import Notice from 'components/notice'
 import LoggedOutForm from 'signup/logged-out-form'
 import formState from 'lib/form-state'
+import i18n from 'lib/mixins/i18n'
 
 const VALIDATION_DELAY_AFTER_FIELD_CHANGES = 1500,
 	debug = debugModule( 'calypso:signup-form:form' );
@@ -43,21 +44,28 @@ export default React.createClass( {
 
 	displayName: 'SignupForm',
 
-	fieldNames: [ 'email', 'username', 'password' ],
-
 	getInitialState() {
 		return {
 			notice: null,
 			submitting: false,
 			form: null,
-			signedUp: false
+			signedUp: false,
+			validationInitialized: false
 		}
+	},
+
+	getInitialFields() {
+		return {
+			email: this.props.email || null,
+			username: null,
+			password: null
+		};
 	},
 
 	componentWillMount() {
 		debug( 'Mounting the SignupForm React component.' );
 		this.formStateController = new formState.Controller( {
-			fieldNames: this.fieldNames,
+			initialFields: this.getInitialFields(),
 			sanitizerFunction: this.sanitize,
 			validatorFunction: this.validate,
 			onNewState: this.setFormState,
@@ -67,6 +75,13 @@ export default React.createClass( {
 			initialState: this.props.step ? this.props.step.form : undefined
 		} );
 		this.setState( { form: this.formStateController.getInitialState() } );
+	},
+
+	componentDidMount() {
+		// If we initialized the form with an email, we need to validate the email
+		if ( this.props.email ) {
+			this.handleBlur();
+		}
 	},
 
 	sanitizeEmail( email ) {
@@ -145,6 +160,9 @@ export default React.createClass( {
 			}
 
 			onComplete( error, messages );
+			if ( ! this.state.validationInitialized ) {
+				this.setState( { validationInitialized: true } );
+			}
 		} );
 	},
 
@@ -258,7 +276,7 @@ export default React.createClass( {
 				<ValidationFieldset errorMessages={ this.getErrorMessagesWithLogin( 'email' ) }>
 					<FormLabel htmlFor="email">{ this.translate( 'Your email address' ) }</FormLabel>
 					<FormTextInput
-						autoFocus={ true }
+						autoFocus={ ! this.props.email }
 						autoCapitalize="off"
 						autoCorrect="off"
 						className="signup-form__input"
@@ -266,9 +284,9 @@ export default React.createClass( {
 						id="email"
 						name="email"
 						type="email"
-						value={ formState.getFieldValue( this.state.form, 'email' ) || this.props.email }
+						value={ formState.getFieldValue( this.state.form, 'email' ) }
 						isError={ formState.isFieldInvalid( this.state.form, 'email' ) }
-						isValid={ formState.isFieldValid( this.state.form, 'email' ) }
+						isValid={ this.state.validationInitialized && formState.isFieldValid( this.state.form, 'email' ) }
 						onBlur={ this.handleBlur }
 						onChange={ this.handleChangeEvent } />
 				</ValidationFieldset>
@@ -276,6 +294,7 @@ export default React.createClass( {
 				<ValidationFieldset errorMessages={ this.getErrorMessagesWithLogin( 'username' ) }>
 					<FormLabel htmlFor="username">{ this.translate( 'Choose a username' ) }</FormLabel>
 					<FormTextInput
+						autoFocus={ ! ! this.props.email }
 						autoCapitalize="off"
 						autoCorrect="off"
 						className="signup-form__input"
@@ -317,6 +336,11 @@ export default React.createClass( {
 		)
 	},
 
+	getTermsOfServiceUrl() {
+		// locales where we don't have translated TOS will simply show the English one
+		return 'https://' + i18n.getLocaleSlug() + '.wordpress.com/tos/';
+	},
+
 	termsOfServiceLink() {
 		return (
 			<p className='signup-form__terms-of-service-link'>{
@@ -325,7 +349,7 @@ export default React.createClass( {
 					{
 						components: {
 							a: <a
-								href="https://en.wordpress.com/tos/"
+								href={ this.getTermsOfServiceUrl() }
 								onClick={ this.handleOnClickTos }
 								target="_blank" />
 						}
@@ -350,7 +374,7 @@ export default React.createClass( {
 			<div>
 				{ this.getNotice() }
 				{ this.termsOfServiceLink() }
-				<FormButton className="signup-form__submit">
+				<FormButton className="signup-form__submit" disabled={ this.state.submitting || this.props.disabled }>
 					{ this.props.submitButtonText }
 				</FormButton>
 			</div>

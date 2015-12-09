@@ -8,7 +8,7 @@ Load [http://calypso.localhost:3000](http://calypso.localhost:3000/) in your bro
 
 ## Adding a new section
 
-Sections are usually bigger areas of the appliction that have their own chunk of code, loaded asyncronously when its URLs is hit.
+Sections are usually bigger areas of the application that have their own chunk of code, loaded asyncronously when its URLs is hit.
 
 Creating a new section is composed of five steps:
 
@@ -94,7 +94,7 @@ export default () => {
 
 ### 4. Register section
 
-Now it's time to configure our section. Open `client/my-sites/sections.js` and add the following code:
+Now it's time to configure our section. Open `client/sections.js` and add the following code:
 
 ```javascript
 if ( config.isEnabled( 'hello-world' ) ) {

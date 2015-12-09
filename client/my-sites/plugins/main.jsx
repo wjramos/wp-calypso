@@ -251,7 +251,7 @@ export default React.createClass( {
 		this.recordEvent( 'Clicked Deactivate Plugin(s)', true );
 	},
 
-	deactiveAndDisconnectSelected: function() {
+	deactiveAndDisconnectSelected() {
 		var waitForDeactivate = false;
 
 		this.doActionOverSelected( 'deactivating', ( site, plugin ) => {
@@ -528,9 +528,9 @@ export default React.createClass( {
 			needsAutoUpdates = ! hasWpcomPlugins && sitesCanUpdateFiles && this.areSelected(),
 			needsActivateLink = this.areSelected( 'inactive' ),
 			needsDeactivateLink = this.areSelected( 'active' ),
-			deactivateLink = isJetpackSelected ?
-				<a onClick={ this.deactiveAndDisconnectSelected }>{ this.translate( 'Disconnect' ) }</a> :
-				<a onClick={ this.deactivateSelected }>{ this.translate( 'Deactivate' ) }</a>;
+			deactivateLink = isJetpackSelected
+			? <a onClick={ this.deactiveAndDisconnectSelected }>{ this.translate( 'Disconnect' ) }</a>
+			: <a onClick={ this.deactivateSelected }>{ this.translate( 'Deactivate' ) }</a>;
 
 		return (
 			<div className={ bulkActionOptionsClasses }>
@@ -633,6 +633,71 @@ export default React.createClass( {
 		return some( this.props.sites.getSelectedOrAllWithPlugins(), site => site && site.jetpack && site.canUpdateFiles );
 	},
 
+	updateAllPlugins() {
+		PluginsActions.removePluginsNotices( this.state.notices.completed.concat( this.state.notices.errors ) );
+		this.state.plugins.forEach( plugin => {
+			plugin.sites.forEach( site => PluginsActions.updatePlugin( site, site.plugin ) );
+		} );
+		this.recordEvent( 'Clicked Update all Plugins', true );
+	},
+
+	renderNavItems() {
+		let navItems = [];
+
+		if ( this.props && this.props.filter === 'updates' ) {
+			navItems.push(
+				<NavItem onClick={ this.updateAllPlugins } key="updatesKeyItem" >
+					{ this.translate( 'Update All', { context: 'button label' } ) }
+				</NavItem>
+			);
+		}
+
+		navItems.push(
+			<NavItem onClick={ this.toggleBulkManagement } selected={ this.state.bulkManagement } key="bulkManage" >
+				{
+					this.state.bulkManagement
+					? this.translate( 'Done', { context: 'button label' } )
+					: this.translate( 'Manage', { context: 'button label' } )
+				}
+			</NavItem>
+		);
+		return navItems;
+	},
+
+	getMockPluginItems() {
+		const plugins = [ {
+			slug: 'akismet',
+			name: 'Akismet',
+			wporg: true,
+			icon: '//ps.w.org/akismet/assets/icon-256x256.png'
+		}, {
+			slug: 'wp-super-cache',
+			name: 'WP Super Cache',
+			wporg: true,
+			icon: '//ps.w.org/wp-super-cache/assets/icon-256x256.png'
+		}, {
+			slug: 'jetpack',
+			name: 'Jetpack by WordPress.com',
+			wporg: true,
+			icon: '//ps.w.org/jetpack/assets/icon-256x256.png'
+		} ];
+		const selectedSite = {
+			slug: 'no-slug',
+			canUpdateFiles: true,
+			name: 'Not a real site'
+		}
+
+		return plugins.map( plugin => {
+			return <PluginItem
+				key={ 'plugin-item-mock-' + plugin.slug }
+				plugin={ plugin }
+				sites={ [] }
+				selectedSite={ selectedSite }
+				progress={ [] }
+				isMock={ true } />
+		} );
+	},
+
 	render() {
 		if ( this.state.accessError ) {
 			return (
@@ -659,9 +724,9 @@ export default React.createClass( {
 					<JetpackManageErrorPage
 						template="optInManage"
 						site={ this.props.site }
-						actionURL={ selectedSite.getRemoteManagementURL() }
-						illustration= '/calypso/images/drake/drake-jetpack.svg'
-					/>
+						actionURL={ selectedSite.getRemoteManagementURL() + '&section=plugins' }
+						illustration= '/calypso/images/jetpack/jetpack-manage.svg'
+						featureExample={ this.getMockPluginItems() } />
 				</Main>
 			);
 		}
@@ -674,13 +739,7 @@ export default React.createClass( {
 			toolbarSelect = this.toolbarSelect();
 			manageLink = (
 				<NavSegmented>
-					<NavItem onClick={ this.toggleBulkManagement } selected={ this.state.bulkManagement }>
-						{
-							this.state.bulkManagement ?
-							this.translate( 'Done', { context: 'button label' } ) :
-							this.translate( 'Manage', { context: 'button label' } )
-						}
-					</NavItem>
+					{ this.renderNavItems() }
 				</NavSegmented>
 			);
 		}
@@ -752,9 +811,18 @@ export default React.createClass( {
 							if ( 'updates' === filterItem.id && ! this.getUpdatesTabVisibility() ) {
 								return null;
 							}
-							const count = 'updates' === filterItem.id && this.state.pluginUpdateCount;
+
+							let attr = {
+								key: filterItem.id,
+								path: filterItem.path,
+								selected: filterItem.id === this.props.filter,
+							}
+
+							if ( 'updates' === filterItem.id ) {
+								attr.count = this.state.pluginUpdateCount;
+							}
 							return (
-								<NavItem key={ filterItem.id } path={ filterItem.path } selected={ filterItem.id === this.props.filter } count={ count } >
+								<NavItem { ...attr } >
 									{ filterItem.title }
 								</NavItem>
 							);

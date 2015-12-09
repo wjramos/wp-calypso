@@ -9,8 +9,8 @@ import intersection from 'lodash/array/intersection';
 /**
  * Internal Dependencies
  **/
-
-import SimpleNotice from 'notices/simple-notice';
+import Notice from 'components/notice';
+import purchasesPaths from 'me/purchases/paths';
 import domainConstants from 'lib/domains/constants';
 import i18n from 'lib/mixins/i18n';
 
@@ -20,10 +20,8 @@ const debug = _debug( 'calypso:domain-warnings' );
 const allAboutDomainsLink = <a href="https://support.wordpress.com/all-about-domains/" target="_blank"/>,
 	domainsLink = <a href="https://support.wordpress.com/domains/" target="_blank" />,
 	pNode = <p />,
-	renewLinkSingle = <a href="/my-upgrades"
-													target="_blank">{ i18n.translate( 'Renew it now.', { context: 'Call to action link for renewing an expiring/expired domain' } ) }</a>,
-	renewLinkPlural = <a href="/my-upgrades"
-													target="_blank">{ i18n.translate( 'Renew them now.', { context: 'Call to action link for renewing an expiring/expired domain' } ) }</a>;
+	renewLinkSingle = <a href={ purchasesPaths.list() }>{ i18n.translate( 'Renew it now.', { context: 'Call to action link for renewing an expiring/expired domain' } ) }</a>,
+	renewLinkPlural = <a href={ purchasesPaths.list() }>{ i18n.translate( 'Renew them now.', { context: 'Call to action link for renewing an expiring/expired domain' } ) }</a>;
 
 export default React.createClass( {
 	displayName: 'DomainWarnings',
@@ -72,7 +70,7 @@ export default React.createClass( {
 			} );
 			renewLink = renewLinkPlural;
 		}
-		return <SimpleNotice status="is-error" showDismiss={false}>{text} {renewLink}</SimpleNotice>
+		return <Notice status="is-error" showDismiss={false}>{text} {renewLink}</Notice>
 	},
 
 	expiringDomains() {
@@ -95,7 +93,7 @@ export default React.createClass( {
 			} );
 			renewLink = renewLinkPlural;
 		}
-		return <SimpleNotice status="is-error" showDismiss={false}>{text} {renewLink}</SimpleNotice>;
+		return <Notice status="is-error" showDismiss={false}>{text} {renewLink}</Notice>;
 	},
 
 	newDomainsWithPrimary() {
@@ -142,7 +140,7 @@ export default React.createClass( {
 			);
 		}
 
-		return <SimpleNotice status="is-warning" showDismiss={ false }>{ text }</SimpleNotice>;
+		return <Notice status="is-warning" showDismiss={ false }>{ text }</Notice>;
 	},
 
 	newDomains() {
@@ -172,7 +170,7 @@ export default React.createClass( {
 				}
 			);
 		}
-		return <SimpleNotice status="is-warning" showDismiss={ false }>{ text }</SimpleNotice>;
+		return <Notice status="is-warning" showDismiss={ false }>{ text }</Notice>;
 	},
 
 	componentWillMount: function() {

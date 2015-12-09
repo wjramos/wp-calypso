@@ -19,7 +19,6 @@ var React = require( 'react/addons' ),
 var SectionNav = require( 'components/section-nav' ),
 	NavTabs = require( 'components/section-nav/tabs' ),
 	NavItem = require( 'components/section-nav/item' ),
-	config = require( 'config' ),
 	upgradesPaths = require( 'my-sites/upgrades/paths' ),
 	viewport = require( 'lib/viewport' ),
 	upgradesActionTypes = require( 'lib/upgrades/constants' ).action,
@@ -33,13 +32,13 @@ var NAV_ITEMS = {
 	Plans: {
 		paths: [ '/plans' ],
 		label: i18n.translate( 'Plans' ),
-		external: false
+		allSitesPath: false
 	},
 
 	Email: {
 		paths: [ upgradesPaths.domainManagementEmail() ],
 		label: i18n.translate( 'Email' ),
-		external: false
+		allSitesPath: false
 	},
 
 	Domains: {
@@ -48,25 +47,13 @@ var NAV_ITEMS = {
 			'/domains/add'
 		],
 		label: i18n.translate( 'Domains' ),
-		external: false
+		allSitesPath: false
 	},
 
 	'Add a Domain': {
 		paths: [ '/domains/add' ],
 		label: i18n.translate( 'Add a Domain' ),
-		external: false
-	},
-
-	'My Domains': {
-		paths: [ '/my-domains' ],
-		label: i18n.translate( 'My Domains' ),
-		external: true
-	},
-
-	'My Upgrades': {
-		paths: [ '/my-upgrades' ],
-		label: i18n.translate( 'My Upgrades' ),
-		external: true
+		allSitesPath: false
 	}
 };
 
@@ -89,9 +76,9 @@ var UpgradesNavigation = React.createClass( {
 
 	componentWillMount: function() {
 		this.dispatchToken = Dispatcher.register( function( payload ) {
-			if ( payload.action.type === upgradesActionTypes.OPEN_CART_POPUP ) {
+			if ( payload.action.type === upgradesActionTypes.CART_POPUP_OPEN ) {
 				this.setState( { cartVisible: true, cartShowKeepSearching: payload.action.options.showKeepSearching } );
-			} else if ( payload.action.type === upgradesActionTypes.CLOSE_CART_POPUP ) {
+			} else if ( payload.action.type === upgradesActionTypes.CART_POPUP_CLOSE ) {
 				this.setState( { cartVisible: false } );
 			}
 		}.bind( this ) );
@@ -123,14 +110,9 @@ var UpgradesNavigation = React.createClass( {
 		var items;
 
 		if ( this.props.selectedSite.jetpack ) {
-			items = [ 'Plans', 'My Upgrades' ];
-		} else if ( config.isEnabled( 'upgrades/domain-management/list' ) ) {
-			items = [ 'Plans', 'Domains', 'Email', 'My Upgrades' ];
-			if ( config.isEnabled( 'upgrades/purchases/list' ) ) {
-				items = [ 'Plans', 'Domains', 'Email' ];
-			}
+			items = [ 'Plans' ];
 		} else {
-			items = [ 'Plans', 'Add a Domain', 'My Domains', 'My Upgrades' ];
+			items = [ 'Plans', 'Domains', 'Email' ];
 		}
 
 		return items.map( propertyOf( NAV_ITEMS ) );
@@ -151,21 +133,20 @@ var UpgradesNavigation = React.createClass( {
 	},
 
 	navItem: function( itemData ) {
-		var { paths, external, label } = itemData,
+		var { paths, allSitesPath, label } = itemData,
 			slug = this.props.selectedSite ? this.props.selectedSite.slug : null,
 			selectedNavItem = this.getSelectedNavItem(),
 			primaryPath = paths[ 0 ],
 			fullPath;
 
-		if ( external ) {
-			fullPath = `https://wordpress.com${primaryPath}`;
+		if ( allSitesPath ) {
+			fullPath = primaryPath;
 		} else {
 			fullPath = slug ? `${ primaryPath }/${ slug }` : primaryPath;
 		}
 
 		return (
 			<NavItem path={ fullPath }
-					isExternalLink={ external }
 					key={ fullPath }
 					selected={ selectedNavItem && ( selectedNavItem.label === label ) }>
 				{ label }

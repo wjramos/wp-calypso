@@ -33,7 +33,8 @@ var LanguageSelector = require( 'components/forms/language-selector' ),
 	ReauthRequired = require( 'me/reauth-required' ),
 	twoStepAuthorization = require( 'lib/two-step-authorization' ),
 	user = require( 'lib/user' )(),
-	Notice = require( 'notices/notice' ),
+	Notice = require( 'components/notice' ),
+	NoticeAction = require( 'components/notice/notice-action' ),
 	notices = require( 'notices' ),
 	observe = require( 'lib/mixins/data-observe' ),
 	eventRecorder = require( 'me/event-recorder' ),
@@ -198,6 +199,32 @@ module.exports = React.createClass( {
 		}.bind( this ) );
 	},
 
+	renderHolidaySnow() {
+		// Note that years and months below are zero indexed
+		let today = this.moment(),
+			startDate = this.moment( { year: today.year(), month: 11, day: 1 } ),
+			endDate = this.moment( { year: today.year(), month: 0, day: 4 } );
+
+		if ( today.isBefore( startDate, 'day' ) && today.isAfter( endDate, 'day' ) ) {
+			return;
+		}
+
+		return (
+			<FormFieldset>
+				<FormLegend>{ this.translate( 'Holiday Snow' ) }</FormLegend>
+				<FormLabel>
+					<FormCheckbox
+						checkedLink={ this.valueLink( 'holidaysnow' ) }
+						disabled={ this.getDisabledState() }
+						id="holidaysnow"
+						name="holidaysnow"
+						onClick={ this.recordCheckboxEvent( 'Holiday Snow' ) } />
+					<span>{ this.translate( 'Show snowfall on WordPress.com sites.' ) }</span>
+				</FormLabel>
+			</FormFieldset>
+		);
+	},
+
 	renderJoinDate: function() {
 		var dateMoment = i18n.moment( user.get().date );
 
@@ -222,17 +249,20 @@ module.exports = React.createClass( {
 
 		return (
 			<Notice
-				button={ this.translate( 'Cancel' ) }
 				isCompact={ true }
-				onClick={ this.cancelEmailChange }
 				showDismiss={ false }
+				status="is-info"
 				text={
 					this.translate( 'There is a pending change of your email to %(email)s. Please check your inbox for a confirmation link.', {
 						args: {
 							email: this.props.userSettings.getSetting( 'new_user_email' )
 						}
 					} )
-				} />
+				}>
+				<NoticeAction onClick={ this.cancelEmailChange }>
+					{ this.translate( 'Cancel' ) }
+				</NoticeAction>
+			</Notice>
 		);
 	},
 
@@ -380,6 +410,8 @@ module.exports = React.createClass( {
 						<span>{ this.translate( 'Show the feedback and progress sidebar after posting.' ) }</span>
 					</FormLabel>
 				</FormFieldset>
+
+				{ this.renderHolidaySnow() }
 
 				<FormButton
 					isSubmitting={ this.state.submittingForm }

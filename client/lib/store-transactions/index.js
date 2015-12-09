@@ -77,20 +77,30 @@ TransactionFlow.prototype._pushStep = function( options ) {
 	};
 
 	this.push( Object.assign( defaults, options ) );
-}
+};
 
 TransactionFlow.prototype._paymentHandlers = {
 	'WPCOM_Billing_MoneyPress_Stored': function() {
+		const {
+			mp_ref: payment_key,
+			stored_details_id,
+			payment_partner
+		} = this._initialData.payment.storedCard;
+
 		this._pushStep( { name: 'input-validation', first: true } );
 		debug( 'submitting transaction with stored card' );
 		this._submitWithPayment( {
 			payment_method: 'WPCOM_Billing_MoneyPress_Stored',
-			payment_key: this._initialData.payment.moneyPressReference
+			payment_key,
+			payment_partner,
+			stored_details_id
 		} );
 	},
 
 	'WPCOM_Billing_MoneyPress_Paygate': function() {
-		var validation = validateCardDetails( this._initialData.payment.newCardDetails );
+		const { newCardDetails } = this._initialData.payment,
+			validation = validateCardDetails( newCardDetails );
+
 		if ( ! isEmpty( validation.errors ) ) {
 			this._pushStep( {
 				name: 'input-validation',
@@ -103,10 +113,16 @@ TransactionFlow.prototype._paymentHandlers = {
 
 		this._pushStep( { name: 'input-validation', first: true } );
 		debug( 'submitting transaction with new card' );
+
 		this._createPaygateToken( function( paygateToken ) {
+			const { name, country, 'postal-code': zip } = newCardDetails;
+
 			this._submitWithPayment( {
 				payment_method: 'WPCOM_Billing_MoneyPress_Paygate',
-				payment_key: paygateToken
+				payment_key: paygateToken,
+				name,
+				zip,
+				country
 			} );
 		}.bind( this ) );
 	},
@@ -224,7 +240,7 @@ function newCardPayment( newCardDetails ) {
 function storedCardPayment( storedCard ) {
 	return {
 		paymentMethod: 'WPCOM_Billing_MoneyPress_Stored',
-		moneyPressReference: storedCard.mp_ref
+		storedCard: storedCard,
 	};
 }
 

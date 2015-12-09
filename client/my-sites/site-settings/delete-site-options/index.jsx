@@ -9,6 +9,7 @@ var React = require( 'react' ),
  * Internal dependencies
  */
 var CompactCard = require( 'components/card/compact' ),
+	purchasesPaths = require( 'me/purchases/paths' ),
 	PurchasesStore = require( 'lib/purchases/store' ),
 	UpgradesActions = require( 'lib/upgrades/actions' ),
 	pollers = require( 'lib/data-poller' ),
@@ -26,7 +27,7 @@ module.exports = React.createClass( {
 	getInitialState: function() {
 		return {
 			showStartOverDialog: false,
-			sitePurchases: PurchasesStore.getBySite( this.props.site.ID ).data
+			sitePurchases: PurchasesStore.getBySite( this.props.site.ID )
 		};
 	},
 
@@ -35,20 +36,20 @@ module.exports = React.createClass( {
 	},
 
 	componentDidMount: function() {
-		PurchasesStore.on( 'change', this._updatesitePurchases );
+		PurchasesStore.on( 'change', this._updateSitePurchases );
 		this._poller = pollers.add( PurchasesStore, UpgradesActions.fetchSitePurchases.bind( UpgradesActions, this.props.site.ID ), { interval: 60000, leading: true } );
 	},
 
 	componentWillUnmount: function() {
 		pollers.remove( this._poller );
-		PurchasesStore.off( 'change', this._updatesitePurchases );
+		PurchasesStore.off( 'change', this._updateSitePurchases );
 	},
 
 	componentWillReceiveProps: function( nextProps ) {
 		if ( nextProps.site.ID !== this.props.site.ID ) {
 			pollers.remove( this._poller );
 			this._poller = pollers.add( PurchasesStore, UpgradesActions.fetchSitePurchases.bind( UpgradesActions, nextProps.site.ID ), { interval: 60000, leading: true } );
-			this._updatesitePurchases( nextProps.site.ID );
+			this._updateSitePurchases( nextProps.site.ID );
 		}
 	},
 
@@ -67,7 +68,7 @@ module.exports = React.createClass( {
 			deleteSite: this.translate( 'Delete Site' )
 		};
 
-		if ( typeof this.state.sitePurchases === 'undefined' ) {
+		if ( ! this.state.sitePurchases.hasLoadedFromServer ) {
 			return null;
 		}
 
@@ -79,8 +80,8 @@ module.exports = React.createClass( {
 
 		dialogButtons = [
 			{ action: 'dismiss', label: this.translate( 'Dismiss' ) },
-			<a className="button is-primary" href={ 'https://wordpress.com/my-upgrades' }>{
-				this.translate( 'Manage Upgrades', { context: 'button label' } )
+			<a className="button is-primary" href={ purchasesPaths.list() }>{
+				this.translate( 'Manage Purchases', { context: 'button label' } )
 			}</a>
 		];
 
@@ -124,18 +125,19 @@ module.exports = React.createClass( {
 		);
 	},
 
-	_updatesitePurchases: function( siteId = this.props.site.ID ) {
+	_updateSitePurchases: function( siteId = this.props.site.ID ) {
 		if ( PurchasesStore.get().error ) {
 			notices.error( PurchasesStore.get().error );
 		}
 
 		this.setState( {
-			sitePurchases: PurchasesStore.getBySite( siteId ).data
+			sitePurchases: PurchasesStore.getBySite( siteId )
 		} );
 	},
 
 	_checkForSubscriptions: function( event ) {
-		var activeSubscriptions = filter( this.state.sitePurchases, 'active' );
+		var activeSubscriptions = filter( this.state.sitePurchases.data, 'active' );
+
 		if ( ! activeSubscriptions.length ) {
 			return true;
 		}

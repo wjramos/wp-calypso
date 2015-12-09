@@ -1,3 +1,7 @@
+/**
+ * Internal dependencies
+ */
+import i18n from 'lib/mixins/i18n';
 
 export default {
 	userCan( capability, site ) {
@@ -58,5 +62,88 @@ export default {
 		if ( site.options ) {
 			return site.options.default_post_format;
 		}
+	},
+
+	getSiteFileModDisableReason( site ) {
+		if ( ! site || ! site.options || ! site.options.file_mod_disabled ) {
+			return;
+		}
+		let reasons = [];
+		for ( let clue of site.options.file_mod_disabled ) {
+			switch ( clue ) {
+				case 'is_version_controlled':
+					reasons.push(
+						i18n.translate( 'This site\'s files are under version control.' )
+					);
+					break;
+				case 'has_no_file_system_write_access':
+					reasons.push(
+						i18n.translate( 'The file permissions on this host prevent editing files.' )
+					);
+					break;
+				case 'automatic_updater_disabled':
+					reasons.push(
+						i18n.translate( 'Any autoupdates are explicitly disabled by a site administrator.' )
+					);
+					break;
+				case 'wp_auto_update_core_disabled':
+					reasons.push(
+						i18n.translate( 'Core autoupdates are explicitly disabled by a site administrator.' )
+					);
+					break
+				case 'disallow_file_mods':
+					reasons.push(
+						i18n.translate( 'File modifications are explicitly disabled by a site administrator.' )
+					);
+					break;
+			}
+		}
+		return reasons;
+	},
+
+	canUpdateFiles( site ) {
+		if ( ! site ) {
+			return false;
+		}
+		if ( ! site.hasMinimumJetpackVersion ) {
+			return false;
+		}
+
+		if ( ! this.isMainNetworkSite( site ) ) {
+			return false;
+		}
+
+		if ( site.options.is_multi_network ) {
+			return false;
+		}
+
+		if ( site.options.file_mod_disabled ) {
+			return false;
+		}
+
+		return true;
+	},
+
+	isMainNetworkSite( site ) {
+		if ( ! site ) {
+			return false;
+		}
+
+		if ( site.options && site.options.is_multi_network ) {
+			return false;
+		}
+
+		if ( site.is_multisite === false ) {
+			return true;
+		}
+
+		if ( site.is_multisite ) {
+			// Compare unmapped_url with the main_network_site to see if is the main network site.
+			return ! ( site.options &&
+				site.options.unmapped_url.replace( /^https?:\/\//, '' ) !== site.options.main_network_site.replace( /^https?:\/\//, '' )
+			);
+		}
+
+		return false;
 	}
 };

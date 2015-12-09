@@ -87,14 +87,14 @@ function reducer( state, payload ) {
 				settingPrimaryDomain: false
 			} );
 
-		case UpgradesActionTypes.DOMAIN_ENABLE_PRIVACY_PROTECTION_COMPLETED:
+		case UpgradesActionTypes.PRIVACY_PROTECTION_ENABLE_COMPLETED:
 			return updateDomainState( state, action.siteId, action.domainName, {
 				privateDomain: true
 			} );
 
 		case UpgradesActionTypes.DOMAIN_TRANSFER_CODE_REQUEST_COMPLETED:
 			domainData = getSelectedDomain( {
-				domains: getForSite( state, action.siteId ),
+				domains: getBySite( state, action.siteId ),
 				selectedDomainName: action.domainName
 			} );
 			privateDomain = ( ! action.disablePrivacy ) && domainData.privateDomain;
@@ -108,12 +108,12 @@ function reducer( state, payload ) {
 	}
 }
 
-function getForSite( state, siteId ) {
+function getBySite( state, siteId ) {
 	return state[ siteId ];
 }
 
 export {
-	getForSite,
+	getBySite,
 	initialState,
 	reducer
 };

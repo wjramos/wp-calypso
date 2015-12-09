@@ -26,7 +26,6 @@ var PageList = React.createClass( {
 		context: React.PropTypes.object,
 		search: React.PropTypes.string,
 		sites: React.PropTypes.object,
-		statusSlug: React.PropTypes.string,
 		siteID: React.PropTypes.any
 	},
 
@@ -60,14 +59,15 @@ var Pages = React.createClass({
 		search: React.PropTypes.string,
 		siteID: React.PropTypes.any,
 		sites: React.PropTypes.object.isRequired,
-		statusSlug: React.PropTypes.string,
-		trackScrollPage: React.PropTypes.func.isRequired
+		trackScrollPage: React.PropTypes.func.isRequired,
+		hasRecentError: React.PropTypes.bool.isRequired
 	},
 
 	getDefaultProps: function() {
 		return {
 			perPage: 20,
 			loading: false,
+			hasRecentError: false,
 			lastPage: false,
 			page: 0,
 			posts: [],
@@ -76,7 +76,7 @@ var Pages = React.createClass({
 	},
 
 	fetchPages: function( options ) {
-		if ( this.props.loading || this.props.lastPage ) {
+		if ( this.props.loading || this.props.lastPage || this.props.hasRecentError ) {
 			return;
 		}
 		if ( options.triggeredByScroll ) {
@@ -123,7 +123,7 @@ var Pages = React.createClass({
 			return <NoResults
 				image="/calypso/images/pages/illustration-pages.svg"
 				text={
-					this.translate( 'No posts match your search for {{searchTerm/}}.', {
+					this.translate( 'No pages match your search for {{searchTerm/}}.', {
 						components: {
 							searchTerm: <em>{ this.props.search }</em>
 						}
@@ -137,28 +137,44 @@ var Pages = React.createClass({
 				newPageLink = selectedSite ? '//wordpress.com/page/' + selectedSite.ID + '/new' : '//wordpress.com/page';
 			}
 
-			switch( this.props.statusSlug ) {
-				case 'drafts':
-					attributes = {
-						title: this.translate( 'You don\'t have any drafts.' ),
-						line: this.translate( 'Would you like to create one?' ),
-						action: this.translate( 'Start a Page' ),
-						actionURL: newPageLink
-					};
-					break;
-				case 'trashed':
-					attributes = {
-						title: this.translate( 'You don\'t have any pages in your trash folder.' ),
-						line: this.translate( 'Everything you write is solid gold.' )
-					};
-					break;
-				default:
-					attributes = {
-						title: this.translate( 'You haven\'t published any pages yet.' ),
-						line: this.translate( 'Would you like to publish your first page?' ),
-						action: this.translate( 'Start a Page' ),
-						actionURL: newPageLink
-					};
+			if ( this.props.hasRecentError ) {
+				attributes = {
+					title: this.translate( 'Oh, no! We couldn\'t fetch your pages.' ),
+					line: this.translate( 'Please check your internet connection.' )
+				};
+			} else {
+				const status = this.props.status || 'published';
+				switch ( status ) {
+					case 'drafts':
+						attributes = {
+							title: this.translate( 'You don\'t have any drafts.' ),
+							line: this.translate( 'Would you like to create one?' ),
+							action: this.translate( 'Start a Page' ),
+							actionURL: newPageLink
+						};
+						break;
+					case 'scheduled':
+						attributes = {
+							title: this.translate( 'You don\'t have any scheduled pages yet.' ),
+							line: this.translate( 'Would you like to create one?' ),
+							action: this.translate( 'Start a Page' ),
+							actionURL: newPageLink
+						};
+						break;
+					case 'trashed':
+						attributes = {
+							title: this.translate( 'You don\'t have any pages in your trash folder.' ),
+							line: this.translate( 'Everything you write is solid gold.' )
+						};
+						break;
+					default:
+						attributes = {
+							title: this.translate( 'You haven\'t published any pages yet.' ),
+							line: this.translate( 'Would you like to publish your first page?' ),
+							action: this.translate( 'Start a Page' ),
+							actionURL: newPageLink
+						};
+				}
 			}
 		}
 

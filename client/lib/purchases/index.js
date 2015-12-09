@@ -9,24 +9,31 @@ import moment from 'moment';
  * Internal dependencies
  */
 import i18n from 'lib/mixins/i18n';
-import { isDomainRegistration, isTheme, isPlan } from 'lib/products-values';
+import { isDomainMapping, isDomainRegistration, isTheme, isPlan } from 'lib/products-values';
 
 /**
  * Returns an array of sites objects, each of which contains an array of purchases.
  *
  * @param {array} purchases An array of purchase objects.
+ * @param {array} sites An array of site objects
  * @return {array} An array of sites with purchases attached.
  */
-function getPurchasesBySite( purchases ) {
+function getPurchasesBySite( purchases, sites ) {
 	return purchases.reduce( ( result, currentValue ) => {
 		const site = find( result, { id: currentValue.siteId } );
 		if ( site ) {
 			site.purchases = site.purchases.concat( currentValue );
 		} else {
+			const siteObject = find( sites, { ID: currentValue.siteId } );
+
 			result = result.concat( {
 				domain: currentValue.domain,
 				id: currentValue.siteId,
 				name: currentValue.siteName,
+				/* if the purchase is attached to a deleted site,
+				 * there will be no site with this ID in `sites`, so
+				 * we fall back on the domain. */
+				slug: siteObject ? siteObject.slug : currentValue.domain,
 				title: currentValue.siteName ? currentValue.siteName : currentValue.domain,
 				purchases: [ currentValue ]
 			} );
@@ -56,13 +63,26 @@ function hasPrivateRegistration( purchase ) {
 	return purchase.hasPrivateRegistration;
 }
 
+/**
+ * Checks if a purchase can be cancelled.
+ * Returns true for purchases that aren't expired
+ * Also returns true for purchases whether or not they are after the refund period.
+ * Purchases included with a plan can't be cancelled.
+ *
+ * @param {Object} purchase
+ * @return {boolean}
+ */
 function isCancelable( purchase ) {
-	if ( isRefundable( purchase ) ) {
-		return true;
-	}
-
 	if ( isIncludedWithPlan( purchase ) ) {
 		return false;
+	}
+
+	if ( isExpired( purchase ) ) {
+		return false;
+	}
+
+	if ( isRefundable( purchase ) ) {
+		return true;
 	}
 
 	return purchase.canDisableAutoRenew;
@@ -97,8 +117,36 @@ function isRedeemable( purchase ) {
 	return purchase.isRedeemable;
 }
 
+/**
+ * Checks if a purchase can be canceled and refunded.
+ * Purchases usually can be refunded up to 30 days after purchase.
+ * Domains and domain mappings can be refunded up to 48 hours.
+ * Purchases included with plan can't be refunded.
+ *
+ * @param {Object} purchase
+ * @return {boolean}
+ */
 function isRefundable( purchase ) {
 	return purchase.isRefundable;
+}
+
+/**
+ * Checks if an expired purchase can be removed from a user account.
+ * Only domains and domain mappings can be removed.
+ * Purchases included with plan can't be removed.
+ *
+ * @param {Object} purchase
+ * @return {boolean}
+ */
+function isRemovable( purchase ) {
+	if ( isIncludedWithPlan( purchase ) ) {
+		return false;
+	}
+
+	return (
+		( isDomainRegistration( purchase ) || isDomainMapping( purchase ) ) &&
+		isExpired( purchase )
+	);
 }
 
 function isRenewable( purchase ) {
@@ -110,7 +158,7 @@ function isRenewing( purchase ) {
 }
 
 function isPaidWithCreditCard( purchase ) {
-	return 'credit_card' === purchase.payment.type;
+	return 'credit_card' === purchase.payment.type && hasCreditCardData( purchase );
 }
 
 function hasCreditCardData( purchase ) {
@@ -184,6 +232,7 @@ export {
 	isOneTimePurchase,
 	isRedeemable,
 	isRefundable,
+	isRemovable,
 	isRenewable,
 	isRenewing,
 	paymentLogoType,

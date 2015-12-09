@@ -13,7 +13,7 @@ var countriesList = require( 'lib/countries-list' ).forSms(),
 	formBase = require( 'me/form-base' ),
 	FormButton = require( 'components/forms/form-button' ),
 	FormButtonsBar = require( 'components/forms/form-buttons-bar' ),
-	SimpleNotice = require( 'notices/simple-notice' ),
+	Notice = require( 'components/notice' ),
 	protectForm = require( 'lib/mixins/protect-form' ),
 	Security2faProgress = require( 'me/security-2fa-progress' ),
 	analytics = require( 'analytics' );
@@ -157,10 +157,10 @@ module.exports = React.createClass( {
 		}
 
 		return (
-			<SimpleNotice
+			<Notice
 				isCompact
 				status="is-error"
-				onClick={ this.clearLastError }
+				onDismissClick={ this.clearLastError }
 				text={ errorMessage }
 			/>
 		);

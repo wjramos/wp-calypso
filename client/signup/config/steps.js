@@ -1,4 +1,5 @@
 import stepActions from 'lib/signup/step-actions';
+import { abtest } from 'lib/abtest';
 
 module.exports = {
 	themes: {
@@ -31,6 +32,32 @@ module.exports = {
 
 	test: {
 		stepName: 'test',
+	},
+
+	'survey-user': {
+		stepName: 'survey-user',
+		apiRequestFunction: stepActions.createAccount,
+		dependencies: [ 'surveySiteType', 'surveyQuestion' ],
+		providesToken: true,
+		providesDependencies: [ 'bearer_token', 'username' ]
+	},
+
+	'survey-blog': {
+		stepName: 'survey-blog',
+		props: {
+			surveySiteType: 'blog',
+			isOneStep: abtest( 'verticalSurvey' ) === 'oneStep'
+		},
+		providesDependencies: [ 'surveySiteType', 'surveyQuestion' ]
+	},
+
+	'survey-site': {
+		stepName: 'survey-site',
+		props: {
+			surveySiteType: 'site',
+			isOneStep: abtest( 'verticalSurvey' ) === 'oneStep'
+		},
+		providesDependencies: [ 'surveySiteType', 'surveyQuestion' ]
 	},
 
 	plans: {

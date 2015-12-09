@@ -11,7 +11,8 @@ var React = require( 'react/addons' ),
  */
 var CompactCard = require( 'components/card/compact' ),
 	Gridicon = require( 'components/gridicon' ),
-	Notice = require( 'notices/notice' ),
+	Notice = require( 'components/notice' ),
+	NoticeAction = require( 'components/notice/notice-action' ),
 	SiteIcon = require( 'components/site-icon' ),
 	PostRelativeTimeStatus = require( 'my-sites/post-relative-time-status' ),
 	PopoverMenu = require( 'components/popover/menu' ),
@@ -33,13 +34,15 @@ module.exports = React.createClass( {
 		isPlaceholder: React.PropTypes.bool,
 		sites: React.PropTypes.object,
 		onTitleClick: React.PropTypes.func,
-		postImages: React.PropTypes.object
+		postImages: React.PropTypes.object,
+		selected: React.PropTypes.bool
 	},
 
 	getDefaultProps: function() {
 		return {
 			showAllActions: false,
-			onTitleClick: noop
+			onTitleClick: noop,
+			selected: false
 		};
 	},
 
@@ -158,7 +161,8 @@ module.exports = React.createClass( {
 				'is-trashed': this.props.post.status === 'trash' || this.state.isTrashing,
 				'is-placeholder': this.props.isPlaceholder,
 				'is-restoring': this.state.isRestoring,
-				'is-touch': hasTouch()
+				'is-touch': hasTouch(),
+				'is-selected': this.props.selected
 			}
 		];
 
@@ -214,14 +218,19 @@ module.exports = React.createClass( {
 
 	showStatusChange: function() {
 		if ( this.props.post.status === 'publish' ) {
-			return <Notice isCompact
+			return (
+					<Notice isCompact = { true }
 						status="is-success"
 						text={ 'Post successfully published.' }
 						button={ 'View' }
-						href={ this.props.post.URL }
-						showDismiss={ false } />;
+						showDismiss={ false }>
+						<NoticeAction href={ this.props.post.URL }>
+							{ 'View' }
+						</NoticeAction>
+					</Notice>
+					);
 		} else if ( this.state.hasError ) {
-			return <Notice isCompact
+			return <Notice isCompact = { true }
 						status="is-error"
 						text={ 'There was a problem.' }
 						showDismiss={ false } />;

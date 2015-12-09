@@ -3,7 +3,7 @@ JavaScript Coding Guidelines
 
 ## Spacing
 
-Use spaces liberally throughout your code. “When in doubt, space it out.”
+Use spacing liberally throughout your code. “When in doubt, space it out.”
 
 These rules encourage liberal spacing for improved developer readability. The minification process creates a file that is optimized for browsers to read and process.
 
@@ -434,7 +434,7 @@ const shouldFlop = true;
 
 ### Function names
 
-The first word of a variable name should be a verb (not a noun) to avoid confusion with variables.
+The first word of a function name should be a verb (not a noun) to avoid confusion with variables.
 
 ```js
 // bad

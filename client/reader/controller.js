@@ -44,6 +44,7 @@ function trackScrollPage( path, title, category, readerView, pageNum ) {
 	debug( 'scroll [%s], [%s], [%s], [%d]', path, title, category, pageNum );
 
 	analytics.ga.recordEvent( category, 'Loaded Next Page', 'page', pageNum );
+	analytics.tracks.recordEvent( 'calypso_reader_infinite_scroll_performed' );
 	analytics.pageView.record( path, title );
 	analytics.mc.bumpStat( {
 		newdash_pageviews: 'scroll',
@@ -82,7 +83,10 @@ module.exports = {
 	sidebar: function( context, next ) {
 		var ReaderSidebarComponent = require( 'reader/sidebar' );
 
-		context.layout.setState( { section: 'reader' } );
+		context.layout.setState( {
+			section: 'reader',
+			noSidebar: false
+		} );
 
 		React.render(
 			React.createElement( ReaderSidebarComponent, { path: context.path } ),
@@ -134,6 +138,7 @@ module.exports = {
 		ensureStoreLoading( feedStore );
 
 		trackPageLoad( basePath, fullAnalyticsPageTitle, mcKey );
+		analytics.tracks.recordEvent( 'calypso_reader_blog_preview' );
 
 		React.render(
 			React.createElement( FeedStream, {
@@ -166,6 +171,7 @@ module.exports = {
 		ensureStoreLoading( feedStore );
 
 		trackPageLoad( basePath, fullAnalyticsPageTitle, mcKey );
+		analytics.tracks.recordEvent( 'calypso_reader_blog_preview' );
 
 		React.render(
 			React.createElement( SiteStream, {
@@ -279,6 +285,7 @@ module.exports = {
 		ensureStoreLoading( tagStore );
 
 		trackPageLoad( basePath, fullAnalyticsPageTitle, mcKey );
+		analytics.tracks.recordEvent( 'calypso_reader_tag_loaded' );
 
 		React.render(
 			React.createElement( TagStream, {
@@ -310,6 +317,7 @@ module.exports = {
 		ensureStoreLoading( listStore );
 
 		trackPageLoad( basePath, fullAnalyticsPageTitle, mcKey );
+		analytics.tracks.recordEvent( 'calypso_reader_list_loaded' );
 
 		React.render(
 			React.createElement( ListStream, {
@@ -518,6 +526,7 @@ module.exports = {
 		ensureStoreLoading( feedStore );
 
 		trackPageLoad( basePath, fullAnalyticsPageTitle, mcKey );
+		analytics.tracks.recordEvent( 'calypso_reader_discover_viewed' );
 
 		React.render(
 			React.createElement( SiteStream, {
@@ -532,7 +541,8 @@ module.exports = {
 					mcKey
 				),
 				onUpdatesShown: trackUpdatesLoaded.bind( null, mcKey ),
-				suppressSiteNameLink: true
+				suppressSiteNameLink: true,
+				showBack: false
 			} ),
 			document.getElementById( 'primary' )
 		);

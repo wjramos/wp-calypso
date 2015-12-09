@@ -1,9 +1,9 @@
 /**
  * External Dependencies
  */
-import React from 'react';
-import page from 'page';
 import classNames from 'classnames';
+import page from 'page';
+import React from 'react';
 
 /**
  * Internal Dependencies
@@ -11,20 +11,19 @@ import classNames from 'classnames';
 import analytics from 'analytics';
 import Button from 'components/button';
 import Card from 'components/card';
-import Gridicon from 'components/gridicon';
 import { cartItems } from 'lib/cart-values';
+import { domainManagementEdit } from 'my-sites/upgrades/paths';
 import { googleAppsSettingsUrl } from 'lib/google-apps';
 import HeaderCake from 'components/header-cake';
 import Main from 'components/main';
-import NoticeArrowLink from 'notices/arrow-link';
-import PaymentLogo from 'components/payment-logo';
-import SimpleNotice from 'notices/simple-notice';
-import VerticalNavItem from 'components/vertical-nav/item';
-import paths from '../paths';
-import * as upgradesActions from 'lib/upgrades/actions';
-import { isDomainProduct, isGoogleApps, isPlan, isSiteRedirect, isTheme } from 'lib/products-values';
-import { domainManagementEdit } from 'my-sites/upgrades/paths';
+import NoticeAction from 'components/notice/notice-action';
 import { oldShowcaseUrl } from 'lib/themes/helpers';
+import paths from '../paths';
+import PaymentLogo from 'components/payment-logo';
+import Notice from 'components/notice';
+import titles from 'me/purchases/titles';
+import VerticalNavItem from 'components/vertical-nav/item';
+import * as upgradesActions from 'lib/upgrades/actions';
 import {
 	creditCardExpiresBeforeSubscription,
 	getName,
@@ -36,6 +35,7 @@ import {
 	isPaidWithCreditCard,
 	isRedeemable,
 	isRefundable,
+	isRemovable,
 	isRenewable,
 	isRenewing,
 	isIncludedWithPlan,
@@ -45,21 +45,55 @@ import {
 	showCreditCardExpiringWarning,
 	showEditPaymentDetails
 } from 'lib/purchases';
-import { getPurchase, goToList, isDataLoading } from '../utils';
+import { getPurchase, getSelectedSite, goToList, isDataLoading, recordPageView } from '../utils';
+import { isDomainProduct, isGoogleApps, isPlan, isSiteRedirect, isTheme } from 'lib/products-values';
 
 const ManagePurchase = React.createClass( {
 	propTypes: {
 		cart: React.PropTypes.object.isRequired,
 		selectedPurchase: React.PropTypes.object.isRequired,
-		selectedSite: React.PropTypes.object,
+		selectedSite: React.PropTypes.oneOfType( [
+			React.PropTypes.object,
+			React.PropTypes.bool
+		] ).isRequired,
 		destinationType: React.PropTypes.string
+	},
+
+	componentWillMount() {
+		if ( ! this.isDataValid() ) {
+			page.redirect( paths.list() );
+			return;
+		}
+
+		recordPageView( 'manage', this.props );
+	},
+
+	componentWillReceiveProps( nextProps ) {
+		if ( this.isDataValid() && ! this.isDataValid( nextProps ) ) {
+			page.redirect( paths.list() );
+			return;
+		}
+
+		recordPageView( 'manage', this.props, nextProps );
 	},
 
 	isDataFetchingAfterRenewal() {
 		return 'thank-you' === this.props.destinationType && this.props.selectedPurchase.isFetching;
 	},
 
+	isDataValid( props = this.props ) {
+		if ( isDataLoading( props ) ) {
+			return true;
+		}
+
+		return getSelectedSite( props ) && getPurchase( props );
+	},
+
 	renderNotices() {
+		if ( isDataLoading( this.props ) || this.isDataFetchingAfterRenewal() ) {
+			return null;
+		}
+
 		return this.renderPurchaseExpiringNotice() || this.renderCreditCardExpiringNotice();
 	},
 
@@ -67,7 +101,7 @@ const ManagePurchase = React.createClass( {
 		const purchase = getPurchase( this.props );
 		let noticeStatus = 'is-info';
 
-		if ( isDataLoading( this.props ) || ! isExpiring( purchase ) || this.isDataFetchingAfterRenewal() ) {
+		if ( ! isExpiring( purchase ) ) {
 			return null;
 		}
 
@@ -76,7 +110,7 @@ const ManagePurchase = React.createClass( {
 		}
 
 		return (
-			<SimpleNotice
+			<Notice
 				className="manage-purchase__purchase-expiring-notice"
 				showDismiss={ false }
 				status={ noticeStatus }
@@ -88,20 +122,16 @@ const ManagePurchase = React.createClass( {
 						}
 					}
 				) }>
-				<NoticeArrowLink onClick={ this.handleRenew }>
+				<NoticeAction onClick={ this.handleRenew }>
 					{ this.translate( 'Renew Now' ) }
-				</NoticeArrowLink>
-			</SimpleNotice>
+				</NoticeAction>
+			</Notice>
 		);
 	},
 
 	renderCreditCardExpiringNotice() {
-		if ( isDataLoading( this.props ) ) {
-			return null;
-		}
-
 		const purchase = getPurchase( this.props ),
-			{ domain, id, payment: { creditCard } } = purchase;
+			{ id, payment: { creditCard } } = purchase;
 
 		if ( isExpired( purchase ) || isOneTimePurchase( purchase ) || isIncludedWithPlan( purchase ) ) {
 			return null;
@@ -109,7 +139,7 @@ const ManagePurchase = React.createClass( {
 
 		if ( creditCardExpiresBeforeSubscription( purchase ) ) {
 			return (
-				<SimpleNotice
+				<Notice
 					className="manage-purchase__expiring-credit-card-notice"
 					showDismiss={ false }
 					status={ showCreditCardExpiringWarning( purchase ) ? 'is-error' : 'is-info' }>
@@ -122,12 +152,12 @@ const ManagePurchase = React.createClass( {
 									cardExpiry: creditCard.expiryMoment.format( 'MMMM YYYY' )
 								},
 								components: {
-									a: <a href={ paths.editCardDetails( domain, id, creditCard.id ) } />
+									a: <a href={ paths.editCardDetails( this.props.selectedSite.slug, id, creditCard.id ) } />
 								}
 							}
 						)
 					}
-				</SimpleNotice>
+				</Notice>
 			);
 		}
 	},
@@ -160,12 +190,12 @@ const ManagePurchase = React.createClass( {
 		}
 
 		return (
-			<SimpleNotice
+			<Notice
 				className="manage-purchase__path-notice"
 				showDismiss={ false }
 				status="is-success">
 				{ text }
-			</SimpleNotice>
+			</Notice>
 		);
 	},
 
@@ -260,8 +290,8 @@ const ManagePurchase = React.createClass( {
 
 		if ( url && text ) {
 			return (
-				<a href={ url } target="_blank">
-					{ text } <Gridicon size={ 14 } icon="external" />
+				<a href={ url }>
+					{ text }
 				</a>
 			);
 		}
@@ -272,12 +302,16 @@ const ManagePurchase = React.createClass( {
 	renderPaymentInfo() {
 		const purchase = getPurchase( this.props );
 
-		if ( isDataLoading( this.props ) ) {
-			return <span className="manage-purchase__detail" />;
+		if ( isDataLoading( this.props ) || this.isDataFetchingAfterRenewal() ) {
+			return <span className="manage-purchase__content manage-purchase__detail" />;
 		}
 
 		if ( isIncludedWithPlan( purchase ) ) {
-			return this.translate( 'Included with plan' );
+			return (
+				<span className="manage-purchase__content manage-purchase__detail">
+					{ this.translate( 'Included with plan' ) }
+				</span>
+			);
 		}
 
 		if ( hasPaymentMethod( purchase ) ) {
@@ -288,7 +322,7 @@ const ManagePurchase = React.createClass( {
 			}
 
 			return (
-				<span className="manage-purchase__payment-info">
+				<span className="manage-purchase__content manage-purchase__detail">
 					<PaymentLogo type={ paymentLogoType( purchase ) } />
 					{ paymentInfo }
 				</span>
@@ -296,29 +330,30 @@ const ManagePurchase = React.createClass( {
 		}
 
 		return (
-			<span className="manage-purchase__detail">
+			<span className="manage-purchase__content manage-purchase__detail">
 				{ this.translate( 'None' ) }
 			</span>
 		);
 	},
 
 	renderPaymentDetails() {
-		const purchase = getPurchase( this.props );
+		const purchase = getPurchase( this.props ),
+			isLoading = isDataLoading( this.props ) || this.isDataFetchingAfterRenewal();
 
-		if ( ! isDataLoading( this.props ) && isOneTimePurchase( purchase ) ) {
+		if ( ! isLoading && isOneTimePurchase( purchase ) ) {
 			return null;
 		}
 
 		let paymentDetails = (
 			<span>
-				<em className="manage-purchase__detail-label">
-					{ isDataLoading( this.props ) ? null : this.translate( 'Payment method' ) }
+				<em className="manage-purchase__content manage-purchase__detail-label">
+					{ isLoading ? null : this.translate( 'Payment method' ) }
 				</em>
 				{ this.renderPaymentInfo() }
 			</span>
 		);
 
-		if ( isDataLoading( this.props ) || ! showEditPaymentDetails( purchase ) ) {
+		if ( isLoading || ! showEditPaymentDetails( purchase ) ) {
 			return (
 				<li>
 					{ paymentDetails }
@@ -326,11 +361,11 @@ const ManagePurchase = React.createClass( {
 			);
 		}
 
-		const { domain, id, payment: { creditCard } } = purchase;
+		const { id, payment: { creditCard } } = purchase;
 
 		return (
 			<li>
-				<a href={ paths.editCardDetails( domain, id, creditCard.id ) }>
+				<a href={ paths.editCardDetails( this.props.selectedSite.slug, id, creditCard.id ) }>
 					{ paymentDetails }
 				</a>
 			</li>
@@ -340,7 +375,7 @@ const ManagePurchase = React.createClass( {
 	renderRenewButton() {
 		const purchase = getPurchase( this.props );
 
-		if ( ! isRenewable( purchase ) || isExpired( purchase ) || isExpiring( purchase ) || this.isDataFetchingAfterRenewal() ) {
+		if ( ! isRenewable( purchase ) || isExpired( purchase ) || isExpiring( purchase ) ) {
 			return null;
 		}
 
@@ -361,21 +396,21 @@ const ManagePurchase = React.createClass( {
 		}
 
 		return (
-			<SimpleNotice
+			<Notice
 				showDismiss={ false }
 				status="is-error"
 				text={ this.translate( 'This purchase has expired and is no longer in use.' ) }>
-				<NoticeArrowLink onClick={ this.handleRenew }>
+				<NoticeAction onClick={ this.handleRenew }>
 					{ this.translate( 'Renew Now' ) }
-				</NoticeArrowLink>
-			</SimpleNotice>
+				</NoticeAction>
+			</Notice>
 		);
 	},
 
 	renderRenewsOrExpiresOnLabel() {
 		const purchase = getPurchase( this.props );
 
-		if ( ! this.isDataFetchingAfterRenewal() && ( isExpiring( purchase ) || creditCardExpiresBeforeSubscription( purchase ) ) ) {
+		if ( isExpiring( purchase ) || creditCardExpiresBeforeSubscription( purchase ) ) {
 			return this.translate( 'Expires on' );
 		}
 
@@ -388,18 +423,6 @@ const ManagePurchase = React.createClass( {
 
 	renderRenewsOrExpiresOn() {
 		const purchase = getPurchase( this.props );
-
-		if ( this.isDataFetchingAfterRenewal() ) {
-			return null;
-		}
-
-		if ( isRenewing( purchase ) ) {
-			return this.moment( purchase.renewDate ).format( 'LL' );
-		}
-
-		if ( isExpiring( purchase ) || isExpired( purchase ) || creditCardExpiresBeforeSubscription( purchase ) ) {
-			return this.moment( purchase.expiryDate ).format( 'LL' );
-		}
 
 		if ( isIncludedWithPlan( purchase ) ) {
 			const attachedPlanUrl = paths.managePurchase(
@@ -417,18 +440,52 @@ const ManagePurchase = React.createClass( {
 			);
 		}
 
+		if ( isRenewing( purchase ) ) {
+			return this.moment( purchase.renewDate ).format( 'LL' );
+		}
+
+		if ( isExpiring( purchase ) || isExpired( purchase ) || creditCardExpiresBeforeSubscription( purchase ) ) {
+			return this.moment( purchase.expiryDate ).format( 'LL' );
+		}
+
 		if ( isOneTimePurchase( purchase ) ) {
 			return this.translate( 'Never Expires' );
 		}
 	},
 
+	renderRemovePurchaseInformation() {
+		const purchase = getPurchase( this.props ),
+			contactSupportUrl = 'https://support.wordpress.com/contact/';
+
+		if ( ! isRemovable( purchase ) ) {
+			return null;
+		}
+
+		return (
+			<div className="manage-purchase__remove-box">
+				<em className="manage-purchase__content manage-purchase__remove-text">{ this.translate(
+					'{{strong}}Looking to remove this purchase?{{/strong}} Please {{a}}contact support{{/a}} to remove %(purchaseName)s from your account.',
+					{
+						args: {
+							purchaseName: getName( purchase )
+						},
+						components: {
+							a: <a href={ contactSupportUrl } target="_blank" />,
+							strong: <strong />
+						}
+					}
+				) }</em>
+			</div>
+		);
+	},
+
 	renderEditPaymentMethodNavItem() {
 		const purchase = getPurchase( this.props ),
-			{ domain, id, payment } = purchase;
+			{ id, payment } = purchase;
 
 		if ( showEditPaymentDetails( purchase ) ) {
 			return (
-				<VerticalNavItem path={ paths.editCardDetails( domain, id, payment.creditCard.id ) }>
+				<VerticalNavItem path={ paths.editCardDetails( this.props.selectedSite.slug, id, payment.creditCard.id ) }>
 					{ this.translate( 'Edit Payment Method' ) }
 				</VerticalNavItem>
 			);
@@ -439,9 +496,9 @@ const ManagePurchase = React.createClass( {
 
 	renderCancelPurchaseNavItem() {
 		const purchase = getPurchase( this.props ),
-			{ domain, id } = purchase;
+			{ id } = purchase;
 
-		if ( isExpired( purchase ) || ! isCancelable( purchase ) ) {
+		if ( ! isCancelable( purchase ) ) {
 			return null;
 		}
 
@@ -450,7 +507,7 @@ const ManagePurchase = React.createClass( {
 		};
 
 		return (
-			<VerticalNavItem path={ paths.cancelPurchase( domain, id ) }>
+			<VerticalNavItem path={ paths.cancelPurchase( this.props.selectedSite.slug, id ) }>
 				{
 					isRefundable( purchase )
 					? this.translate( 'Cancel and Refund %(purchaseName)s', translateArgs )
@@ -462,14 +519,14 @@ const ManagePurchase = React.createClass( {
 
 	renderCancelPrivateRegistration() {
 		const purchase = getPurchase( this.props ),
-			{ domain, id } = purchase;
+			{ id } = purchase;
 
 		if ( isExpired( purchase ) || ! hasPrivateRegistration( purchase ) ) {
 			return null;
 		}
 
 		return (
-			<VerticalNavItem path={ paths.cancelPrivateRegistration( domain, id ) }>
+			<VerticalNavItem path={ paths.cancelPrivateRegistration( this.props.selectedSite.slug, id ) }>
 				{ this.translate( 'Cancel Private Registration' ) }
 			</VerticalNavItem>
 		);
@@ -487,13 +544,14 @@ const ManagePurchase = React.createClass( {
 			price,
 			renewsOrExpiresOnLabel,
 			renewsOrExpiresOn,
+			removePurchaseInformation,
 			renewButton,
 			expiredRenewNotice,
 			editPaymentMethodNavItem,
 			cancelPurchaseNavItem,
 			cancelPrivateRegistrationNavItem;
 
-		if ( isDataLoading( this.props ) ) {
+		if ( isDataLoading( this.props ) || this.isDataFetchingAfterRenewal() ) {
 			classes = 'manage-purchase__info is-placeholder';
 			editPaymentMethodNavItem = <VerticalNavItem isPlaceholder />;
 			cancelPurchaseNavItem = <VerticalNavItem isPlaceholder />;
@@ -511,6 +569,7 @@ const ManagePurchase = React.createClass( {
 			price = this.renderPrice();
 			renewsOrExpiresOnLabel = this.renderRenewsOrExpiresOnLabel();
 			renewsOrExpiresOn = this.renderRenewsOrExpiresOn();
+			removePurchaseInformation = this.renderRemovePurchaseInformation();
 			renewButton = this.renderRenewButton();
 			expiredRenewNotice = this.renderExpiredRenewNotice();
 			editPaymentMethodNavItem = this.renderEditPaymentMethodNavItem();
@@ -518,37 +577,34 @@ const ManagePurchase = React.createClass( {
 			cancelPrivateRegistrationNavItem = this.renderCancelPrivateRegistration();
 		}
 
-		const renewsOrExpiresOnClasses = classNames( 'manage-purchase__detail', {
-			'is-placeholder': this.isDataFetchingAfterRenewal()
-		} );
-
 		return (
 			<div>
 				<Card className={ classes }>
 					<header className="manage-purchase__header">
-						<strong className="manage-purchase__title">{ purchaseTitleText }</strong>
-						<span className="manage-purchase__subtitle">
+						<strong className="manage-purchase__content manage-purchase__title">{ purchaseTitleText }</strong>
+						<span className="manage-purchase__content manage-purchase__subtitle">
 							{ purchaseTypeText } { purchaseTypeSeparator } { siteName ? siteName : siteDomain }
 						</span>
-						<span className="manage-purchase__settings-link">
+						<span className="manage-purchase__content manage-purchase__settings-link">
 							{ productLink }
 						</span>
 					</header>
 					<ul className="manage-purchase__meta">
 						<li>
-							<em className="manage-purchase__detail-label">
+							<em className="manage-purchase__content manage-purchase__detail-label">
 								{ isDataLoading( this.props ) ? null : this.translate( 'Price' ) }
 							</em>
-							<span className="manage-purchase__detail">{ price }</span>
+							<span className="manage-purchase__content manage-purchase__detail">{ price }</span>
 						</li>
 						<li>
-							<em className="manage-purchase__detail-label">{ renewsOrExpiresOnLabel }</em>
-							<span className={ renewsOrExpiresOnClasses }>
+							<em className="manage-purchase__content manage-purchase__detail-label">{ renewsOrExpiresOnLabel }</em>
+							<span className="manage-purchase__content manage-purchase__detail">
 								{ renewsOrExpiresOn }
 							</span>
 						</li>
 						{ this.renderPaymentDetails() }
 					</ul>
+					{ removePurchaseInformation }
 					{ renewButton }
 				</Card>
 
@@ -562,8 +618,7 @@ const ManagePurchase = React.createClass( {
 	},
 
 	render() {
-		if ( this.props.selectedPurchase.hasLoadedFromServer && ! getPurchase( this.props ) ) {
-			// TODO: redirect to purchases list
+		if ( ! this.isDataValid() ) {
 			return null;
 		}
 
@@ -571,7 +626,9 @@ const ManagePurchase = React.createClass( {
 			<span>
 				{ this.renderPathNotice() }
 				<Main className="manage-purchase">
-					<HeaderCake onClick={ goToList }>{ this.translate( 'Manage Purchase' ) }</HeaderCake>
+					<HeaderCake onClick={ goToList }>
+						{ titles.managePurchase }
+					</HeaderCake>
 					{ this.renderNotices() }
 					{ this.renderPurchaseDetail() }
 				</Main>

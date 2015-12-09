@@ -9,10 +9,11 @@ import times from 'lodash/utility/times';
  * Internal dependencies
  */
 import PurchaseItem from '../item';
+import SectionHeader from 'components/section-header';
 
 const PurchasesSite = React.createClass( {
 	propTypes: {
-		domain: React.PropTypes.string,
+		slug: React.PropTypes.string,
 		name: React.PropTypes.string,
 		purchases: React.PropTypes.array,
 		isPlaceholder: React.PropTypes.bool
@@ -28,18 +29,14 @@ const PurchasesSite = React.createClass( {
 
 		return (
 			<div className={ classes }>
-				<div className="purchases-site__header">
-					<div className="purchases-site__header-text">
-						{ isPlaceholder ? this.translate( 'Loading…' ) : this.props.name }
-					</div>
-				</div>
+				<SectionHeader label={ isPlaceholder ? this.translate( 'Loading…' ) : this.props.name } />
 				{
 					isPlaceholder ?
 					this.placeholders() :
 					this.props.purchases.map( purchase => (
 						<PurchaseItem
 							key={ purchase.id }
-							domain={ this.props.domain }
+							slug={ this.props.slug }
 							purchase={ purchase } />
 						)
 					)

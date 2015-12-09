@@ -2,24 +2,19 @@
  * External dependencies
  */
 var assign = require( 'lodash/object/assign' ),
-	matches = require( 'lodash/utility/matches' ),
 	reject = require( 'lodash/collection/reject' );
 
 /**
 * Internal dependencies
 */
 var config = require( 'config' ),
-	user = require( 'lib/user' )(),
-	abtest = require( 'lib/abtest' ).abtest;
+	stepConfig = require( './steps' ),
+	abtest = require( 'lib/abtest' ).abtest,
+	user = require( 'lib/user' )();
 
 function getCheckoutDestination( dependencies ) {
 	if ( dependencies.cartItem || dependencies.domainItem ) {
 		return '/checkout/' + dependencies.siteSlug;
-	}
-
-	/* NUX Trampoline A/B */
-	if ( 'landing-main' === abtest( 'nuxTrampoline' ) ) {
-		return 'https://' + dependencies.siteSlug + '/?landing';
 	}
 
 	return '/me/next?welcome';
@@ -68,6 +63,20 @@ const flows = {
 		destination: '/me/next/welcome',
 		description: 'This flow is used to test the site step.',
 		lastModified: '2015-09-22'
+	},
+
+	'vert-blog': {
+		steps: abtest( 'verticalSurvey' ) === 'noSurvey' ? [ 'themes', 'domains', 'plans', 'user' ] : [ 'survey-blog', 'themes', 'domains', 'plans', 'survey-user' ],
+		destination: getCheckoutDestination,
+		description: 'Categorizing blog signups for Verticals Survey',
+		lastModified: null
+	},
+
+	'vert-site': {
+		steps: abtest( 'verticalSurvey' ) === 'noSurvey' ? [ 'themes', 'domains', 'plans', 'user' ] : [ 'survey-site', 'themes', 'domains', 'plans', 'survey-user' ],
+		destination: getCheckoutDestination,
+		description: 'Categorizing site signups for Verticals Survey',
+		lastModified: null
 	},
 
 	headstart: {
@@ -140,7 +149,9 @@ function removeUserStepFromFlow( flow ) {
 		return;
 	}
 
-	return assign( {}, flow, { steps: reject( flow.steps, matches( 'user' ) ) } );
+	return assign( {}, flow, {
+		steps: reject( flow.steps, stepName => stepConfig[ stepName ].providesToken )
+	} );
 }
 
 module.exports = {

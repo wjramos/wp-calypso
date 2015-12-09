@@ -18,6 +18,7 @@ import HelpContactConfirmation from 'me/help/help-contact-confirmation';
 import HeaderCake from 'components/header-cake';
 import wpcomLib from 'lib/wp';
 import notices from 'notices';
+import siteList from 'lib/sites-list';
 
 /**
  * Module variables
@@ -26,8 +27,8 @@ const noticeOptions = {
 	duration: 10000,
 	showDismiss: false
 };
-
 const wpcom = wpcomLib.undocumented();
+const sites = siteList();
 
 module.exports = React.createClass( {
 	displayName: 'HelpContact',
@@ -36,6 +37,8 @@ module.exports = React.createClass( {
 		olarkStore.on( 'change', this.updateOlarkState );
 		olarkEvents.on( 'api.chat.onOperatorsAway', this.onOperatorsAway );
 		olarkEvents.on( 'api.chat.onOperatorsAvailable', this.onOperatorsAvailable );
+
+		sites.on( 'change', this.onSitesChanged );
 
 		olarkActions.updateDetails();
 
@@ -56,13 +59,16 @@ module.exports = React.createClass( {
 		if ( details.isConversing && ! isOperatorAvailable ) {
 			olarkActions.shrinkBox();
 		}
+
+		sites.removeListener( 'change', this.onSitesChanged );
 	},
 
 	getInitialState: function() {
 		return {
 			olark: olarkStore.get(),
 			isSubmitting: false,
-			confirmationMessage: null
+			confirmation: null,
+			sitesInitialized: sites.initialized
 		};
 	},
 
@@ -70,17 +76,22 @@ module.exports = React.createClass( {
 		this.setState( { olark: olarkStore.get() } );
 	},
 
+	onSitesChanged: function() {
+		this.setState( { sitesInitialized: sites.initialized } );
+	},
+
 	backToHelp: function() {
 		page( '/help' );
 	},
 
 	startChat: function( contactForm ) {
-		const { message, howCanWeHelp, howYouFeel } = contactForm;
+		const { message, howCanWeHelp, howYouFeel, site } = contactForm;
 
 		// Intentionally not translated since only HE's will see this in the olark console as a notification.
 		const notifications = [
 			'How can you help: ' + howCanWeHelp,
-			'How I feel: ' + howYouFeel
+			'How I feel: ' + howYouFeel,
+			'Site I need help with: ' + ( site ? site.URL : 'N/A' )
 		];
 
 		notifications.forEach( olarkActions.sendNotificationToOperator );
@@ -112,7 +123,44 @@ module.exports = React.createClass( {
 
 			this.setState( {
 				isSubmitting: false,
-				confirmationMessage: this.translate( "We've received your message, and you'll hear back from one of our Happiness Engineers shortly." )
+				confirmation: {
+					title: this.translate( 'We\'re on it!' ),
+					message: this.translate(
+						'We\'ve received your message, and you\'ll hear back from ' +
+						'one of our Happiness Engineers shortly.' )
+				}
+			} );
+		} );
+	},
+
+	submitSupportForumsTopic: function( contactForm ) {
+		const { subject, message } = contactForm;
+
+		this.setState( { isSubmitting: true } );
+
+		wpcom.submitSupportForumsTopic( subject, message, ( error, data ) => {
+			if ( error ) {
+				// TODO: bump a stat here
+				notices.error( error.message );
+
+				this.setState( { isSubmitting: false } );
+				return;
+			}
+
+			this.setState( {
+				isSubmitting: false,
+				confirmation: {
+					title: this.translate( 'Got it!' ),
+					message: this.translate(
+						'Your message has been submitted to our ' +
+						'{{a}}community forums{{/a}}',
+						{
+							components: {
+								a: <a href={ data.topic_URL } />
+							}
+						}
+					)
+				}
 			} );
 		} );
 	},
@@ -179,47 +227,21 @@ module.exports = React.createClass( {
 		}
 	},
 
-	getKayakoTicketForm: function() {
-		const { isSubmitting, olark } = this.state;
-
-		if ( olark.details.isConversing  ) {
-			// Hide the olark widget in the bottom right corner.
-			olarkActions.hideBox();
-		}
-
-		return (
-			<HelpContactForm
-				onSubmit={ this.submitKayakoTicket }
-				buttonLabel={ isSubmitting ? this.translate( 'Submitting support ticket' ) : this.translate( 'Submit support ticket' ) }
-				showHowCanWeHelpField={ true }
-				showHowYouFeelField={ true }
-				showSubjectField={ true }
-				disabled={ isSubmitting }/>
-		);
-	},
-
-	getChatForm: function() {
-		return (
-			<HelpContactForm
-				onSubmit={ this.startChat }
-				buttonLabel={ this.translate( 'Chat with us' ) }
-				showHowCanWeHelpField={ true }
-				showHowYouFeelField={ true }/>
-		);
-	},
-
 	/**
 	 * Get the view for the contact page. This could either be the olark chat widget if a chat is in progress or a contact form.
 	 * @return {object} A JSX object that should be rendered
 	 */
 	getView: function() {
-		const { olark, confirmationMessage } = this.state;
+		const { olark, confirmation, sitesInitialized, isSubmitting } = this.state;
+		const showChatVariation = olark.isUserEligible && olark.isOperatorAvailable;
+		const showKayakoVariation = ! showChatVariation && ( olark.details.isConversing || olark.isUserEligible );
+		const showForumsVariation = ! ( showChatVariation || showKayakoVariation );
 
-		if ( confirmationMessage ) {
-			return <HelpContactConfirmation title={ this.translate( "We're on it!" ) } message={ confirmationMessage }/>;
+		if ( confirmation ) {
+			return <HelpContactConfirmation { ...confirmation } />;
 		}
 
-		if ( ! olark.isOlarkReady ) {
+		if ( ! ( olark.isOlarkReady && sitesInitialized ) ) {
 			return <div className="help-contact__placeholder" />;
 		}
 
@@ -227,11 +249,45 @@ module.exports = React.createClass( {
 			return <OlarkChatbox />;
 		}
 
-		if ( olark.isOperatorAvailable ) {
-			return this.getChatForm();
-		}
+		const contactFormProps = Object.assign(
+			{
+				disabled: isSubmitting,
+				showSubjectField: showKayakoVariation || showForumsVariation,
+				showHowCanWeHelpField: showKayakoVariation || showChatVariation,
+				showHowYouFeelField: showKayakoVariation || showChatVariation,
+				showSiteField: ( showKayakoVariation || showChatVariation ) && ( sites.get().length > 1 ),
+				siteList: sites,
+				siteFilter: site => ( site.visible && ! site.jetpack )
+			},
+			showChatVariation && {
+				onSubmit: this.startChat,
+				buttonLabel: this.translate( 'Chat with us' )
+			},
+			showKayakoVariation && {
+				onSubmit: this.submitKayakoTicket,
+				buttonLabel: isSubmitting ? this.translate( 'Submitting support ticket' ) : this.translate( 'Submit support ticket' )
+			},
+			showForumsVariation && {
+				onSubmit: this.submitSupportForumsTopic,
+				buttonLabel: isSubmitting ? this.translate( 'Asking in the forums' ) : this.translate( 'Ask in the forums' ),
+				formDescription: this.translate(
+					'Post a new question in our {{strong}}public forums{{/strong}}, ' +
+					'where it may be answered by helpful community members, ' +
+					'by submitting the form below. ' +
+					'{{strong}}Please do not{{/strong}} provide financial or ' +
+					'contact information when submitting this form.',
+					{
+						components: {
+							strong: <strong />
+						}
+					} )
+			}
+		);
 
-		return this.getKayakoTicketForm();
+		// Hide the olark widget in the bottom right corner.
+		olarkActions.hideBox();
+
+		return <HelpContactForm { ...contactFormProps } />;
 	},
 
 	render: function() {

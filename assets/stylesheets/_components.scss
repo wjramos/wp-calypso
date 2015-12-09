@@ -6,12 +6,7 @@
 // stylesheet order does not matter.
 // ==========================================================================
 
-@import 'accept-invite/invite-form-header/style';
-@import 'accept-invite/invite-header/style';
-@import 'accept-invite/logged-in-accept/style';
-@import 'accept-invite/style';
 @import 'auth/style';
-@import 'accept-invite/logged-out-invite/style';
 @import 'components/accordion/style';
 @import 'components/add-new-button/style';
 @import 'components/author-selector/style';
@@ -35,6 +30,7 @@
 @import 'components/emojify/style';
 @import 'components/empty-content/style';
 @import 'components/external-link/style';
+@import 'components/feature-example/style';
 @import 'components/flag/style';
 @import 'components/foldable-card/style';
 @import 'components/follow-button/style';
@@ -46,8 +42,10 @@
 @import 'components/info-popover/style';
 @import 'components/input-chrono/style';
 @import 'components/like-button/style';
+@import 'components/loading-placeholder/style';
 @import 'components/main/style';
 @import 'components/mobile-back-to-sidebar/style';
+@import 'components/notice/style';
 @import 'components/payment-logo/style';
 @import 'components/progress-bar/style';
 @import 'components/progress-indicator/style';
@@ -174,6 +172,10 @@
 @import 'my-sites/draft/style';
 @import 'my-sites/drafts/style';
 @import 'my-sites/exporter/style';
+@import 'my-sites/invites/invite-form-header/style';
+@import 'my-sites/invites/invite-header/style';
+@import 'my-sites/invites/invite-accept-logged-in/style';
+@import 'my-sites/invites/invite-accept/style';
 @import 'my-sites/media-library/style';
 @import 'my-sites/no-results/style';
 @import 'my-sites/pages/style';
@@ -231,6 +233,7 @@
 @import 'my-sites/upgrades/cart/style';
 @import 'my-sites/upgrades/checkout/stored-card';
 @import 'my-sites/upgrades/checkout/subscription-text';
+@import 'my-sites/stats/stats-list/style';
 @import 'notices/style';
 @import 'my-sites/upgrades/domain-management/style';
 @import 'post-editor/style';
@@ -280,6 +283,7 @@
 @import 'reader/share/style';
 @import 'reader/sidebar/style';
 @import 'reader/site-and-author-icon/style';
+@import 'reader/site-stream/style';
 @import 'reader/style';
 @import 'reader/stream-header/style';
 @import 'reader/update-notice/style';
@@ -293,9 +297,9 @@
 @import 'signup/skip-step-button/style';
 @import 'signup/step-header/style';
 @import 'signup/steps/domains/style';
+@import 'signup/steps/survey/style';
 @import 'signup/steps/plans/style';
 @import 'signup/steps/site-creation/style';
-@import 'signup/steps/theme-selection/style';
 @import 'signup/validation-fieldset/style';
 @import 'vip/vip-logs/style';
 @import 'signup/steps/dss/style';

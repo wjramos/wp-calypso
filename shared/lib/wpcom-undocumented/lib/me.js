@@ -1,13 +1,14 @@
 /**
  * Module dependencies.
  */
-var debug = require( 'debug' )( 'calypso:wpcom-undocumented:me' );
+import debugFactory from 'debug';
+const debug = debugFactory( 'calypso:wpcom-undocumented:me' );
 
 /**
  * Create an UndocumentedMe instance
  *
- * @param {WPCOM} wpcom
- * @api public
+ * @param {WPCOM} wpcom - WPCOMUndocumented instance
+ * @return {NUll} null
  */
 function UndocumentedMe( wpcom ) {
 	debug( 'UndocumentedMe' );
@@ -181,6 +182,15 @@ UndocumentedMe.prototype.storedCardDelete = function( card, callback ) {
 	var args = {
 		path: '/me/stored-cards/' + card.stored_details_id + '/delete',
 	};
+	return this.wpcom.req.post( args, callback );
+};
+
+UndocumentedMe.prototype.backupCodes = function( callback ) {
+	var args = {
+		apiVersion: '1.1',
+		path: '/me/two-step/backup-codes/new'
+	};
+
 	return this.wpcom.req.post( args, callback );
 };
 

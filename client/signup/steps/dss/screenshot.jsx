@@ -2,17 +2,7 @@
  * External dependencies
  */
 import React from 'react';
-import debugFactory from 'debug';
 import classnames from 'classnames';
-
-/**
- * Internal dependencies
- */
-import DynamicScreenshotsActions from 'lib/dss/actions';
-import ThemePreviewStore from 'lib/dss/preview-store';
-import DSSImageStore from 'lib/dss/image-store';
-
-const debug = debugFactory( 'calypso:dss:screenshot' );
 
 function replaceMarkupWithImage( markup, imageUrl ) {
 	return markup.replace( /(<img [^>]+)src=['"][^'"]+['"]([^>]*>)/g, ( ...imgMatches ) => {
@@ -33,71 +23,58 @@ export default React.createClass( {
 	propTypes: {
 		screenshotUrl: React.PropTypes.string.isRequired,
 		themeRepoSlug: React.PropTypes.string.isRequired,
-		themeSlug: React.PropTypes.string.isRequired
+		themeSlug: React.PropTypes.string.isRequired,
+		isLoading: React.PropTypes.bool,
+		dssImage: React.PropTypes.object,
+		markupAndStyles: React.PropTypes.object,
+		renderComplete: React.PropTypes.bool
 	},
 
-	getInitialState() {
-		return {
-			isLoading: false,
-			markup: '',
-			styles: '',
-			renderComplete: false,
-			dssImage: null
-		};
-	},
-
-	componentWillMount() {
-		ThemePreviewStore.on( 'change', this.updateScreenshot );
-		DSSImageStore.on( 'change', this.updateScreenshot );
-		DynamicScreenshotsActions.fetchThemePreview( this.props.themeRepoSlug );
-	},
-
-	componentWillUnmount() {
-		ThemePreviewStore.off( 'change', this.updateScreenshot );
-		DSSImageStore.off( 'change', this.updateScreenshot );
+	shouldShowLoadingIndicator() {
+		// If the store is waiting on results, show loading.
+		if ( this.props.isLoading ) {
+			return true;
+		}
+		// If the image is preloading, show loading.
+		if ( this.props.dssImage && ! this.props.renderComplete ) {
+			return true;
+		}
+		return false;
 	},
 
 	getAdditionalStyles( imageUrl ) {
 		return `#theme-${this.props.themeSlug} .hero.with-featured-image{background-image:url(${imageUrl});}`;
 	},
 
-	getMarkupAndStyles() {
-		if ( ! this.state.markup || ! this.state.styles ) {
-			return ThemePreviewStore.get()[ this.props.themeRepoSlug ] || { markup: null, styles: null };
-		}
-		return { markup: this.state.markup, styles: this.state.styles };
+	getPreviewStyles() {
+		return { __html: this.props.markupAndStyles.styles };
 	},
 
-	updateScreenshot() {
-		const { isLoading, lastKey, imageResultsByKey } = DSSImageStore.get();
-		if ( ! imageResultsByKey[ lastKey ] ) {
-			return this.setState( Object.assign( {}, this.getInitialState(), { isLoading } ) );
-		}
-		const dssImage = imageResultsByKey[ lastKey ];
-		debug( 'replacing images in ' + this.props.themeRepoSlug + ' screenshot with', dssImage.url );
-		const { markup, styles } = this.getMarkupAndStyles();
-		// Give styles time to render. Note this only happens on first markup
-		// render. Subsequent changes don't flicker unstyled markup.
-		setTimeout( () => this.setState( { renderComplete: true } ), 250 );
-		return this.setState( { dssImage, markup, styles, isLoading } );
+	getPreviewAdditionalStyles() {
+		return { __html: this.props.dssImage ? this.getAdditionalStyles( this.props.dssImage.url ) : '' };
+	},
+
+	getPreviewMarkup() {
+		return { __html: this.props.dssImage ? replaceMarkupWithImage( this.props.markupAndStyles.markup, this.props.dssImage.url ) : this.props.markupAndStyles.markup };
 	},
 
 	render() {
+		const { markup, styles } = this.props.markupAndStyles || { markup: null, styles: null };
 		const containerClassNames = classnames( 'dss-screenshot', {
-			'is-loading': this.state.isLoading,
-			'is-preview-ready': this.state.markup && this.state.styles && this.state.renderComplete
+			'is-loading': this.shouldShowLoadingIndicator(), // show the white overlay
+			'is-preview-ready': markup && styles && this.props.dssImage // show the dynamic screenshot
 		} );
 
-		if ( this.state.markup && this.state.styles ) {
+		if ( markup && styles ) {
 			return (
 				<div className={ containerClassNames }>
 					<div className="dss-screenshot__original">
-						<img src={ this.props.screenshotUrl } alt={ this.translate( 'Loading...' ) } />
+						<img src={ this.props.screenshotUrl } alt={ this.translate( 'Loading…' ) } />
 					</div>
 					<div className="dss-screenshot__dynamic">
-						<style dangerouslySetInnerHTML={{ __html: this.state.styles }} />
-						<style dangerouslySetInnerHTML={{ __html: this.state.dssImage ? this.getAdditionalStyles( this.state.dssImage.url ) : '' }} />
-						<div className="dss-screenshot__markup" dangerouslySetInnerHTML={{ __html: this.state.dssImage ? replaceMarkupWithImage( this.state.markup, this.state.dssImage.url ) : this.state.markup }} />
+						<style dangerouslySetInnerHTML={ this.getPreviewStyles() } />
+						<style dangerouslySetInnerHTML={ this.getPreviewAdditionalStyles() } />
+						<div className="dss-screenshot__markup" dangerouslySetInnerHTML={ this.getPreviewMarkup() } />
 					</div>
 				</div>
 			);
@@ -107,7 +84,7 @@ export default React.createClass( {
 		return (
 			<div className={ containerClassNames }>
 				<div className="dss-screenshot__original">
-					<img src={ this.props.screenshotUrl } alt={ this.translate( 'Loading...' ) } />
+					<img src={ this.props.screenshotUrl } alt={ this.translate( 'Loading…' ) } />
 				</div>
 			</div>
 		);

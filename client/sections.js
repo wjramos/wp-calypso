@@ -11,7 +11,7 @@ sections = [
 	},
 	{
 		name: 'me',
-		paths: [ '/me' ],
+		paths: [ '/me', '/purchases' ],
 		module: 'me'
 	},
 	{
@@ -161,22 +161,11 @@ if ( config.isEnabled( 'help' ) ) {
 	} );
 }
 
-if ( config.isEnabled( 'upgrades/purchases/cancel' ) ||
-	config.isEnabled( 'upgrades/purchases/list' ) ||
-	config.isEnabled( 'upgrades/purchases/payment' ) ||
-	config.isEnabled( 'upgrades/purchases/manage' ) ) {
-	sections.push( {
-		name: 'me',
-		paths: [ '/purchases' ],
-		module: 'me'
-	} );
-}
-
 if ( config.isEnabled( 'accept-invite' ) ) {
 	sections.push( {
 		name: 'accept-invite',
 		paths: [ '/accept-invite' ],
-		module: 'accept-invite',
+		module: 'my-sites/invites',
 		enableLoggedOut: true
 	} );
 }

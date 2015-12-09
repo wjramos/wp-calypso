@@ -1,7 +1,7 @@
 /**
  * Site Grid
  */
-.sites-grid {
+.sites__grid {
 	width: 100%;
 	float: left;
 	box-sizing: border-box;
@@ -74,10 +74,6 @@
 
 	&:nth-child( 3n ) {
 		margin-right: 0;
-
-		@include breakpoint( "<480px" ) {
-			margin: 0;
-		}
 	}
 
 	&.has-update {

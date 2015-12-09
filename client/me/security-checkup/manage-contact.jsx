@@ -2,14 +2,14 @@
  * External dependencies
  */
 var React = require( 'react' ),
-	keyMirror = require( 'react/lib/keyMirror' ),
+	keyMirror = require( 'key-mirror' ),
 	assign = require( 'lodash/object/assign' );
 
 /**
  * Internal dependencies
  */
 var FormButton = require( 'components/forms/form-button' ),
-	SimpleNotice = require( 'notices/simple-notice' ),
+	Notice = require( 'components/notice' ),
 	analytics = require( 'analytics' );
 
 var views = keyMirror( {
@@ -96,14 +96,14 @@ module.exports = React.createClass( {
 			onClick = showDismiss ? this.dismissNotice : null;
 
 			notice = (
-				<SimpleNotice
+				<Notice
 					status={ isError ? 'is-error' : 'is-success' }
 					isCompact={ true }
-					onClick={ onClick }
+					onDismissClick={ onClick }
 					showDismiss={ showDismiss }
 					>
 					{ lastNotice.message }
-				</SimpleNotice>
+				</Notice>
 			);
 		}
 		return notice;

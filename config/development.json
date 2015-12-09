@@ -90,10 +90,7 @@
 		"upgrades/domain-management/site-redirect": true,
 		"upgrades/domain-management/transfer": true,
 		"upgrades/domain-search": true,
-		"upgrades/purchases/cancel": true,
-		"upgrades/purchases/list": true,
-		"upgrades/purchases/manage": true,
-		"upgrades/purchases/payment": true,
+		"upgrades/free-trials": true,
 
 		"manage/customize": true,
 
@@ -117,7 +114,6 @@
 		"me/security": true,
 		"me/security/checkup": true,
 		"me/notifications": true,
-		"me/notifications-control-panel": true,
 		"me/next-steps": true,
 		"me/credit-cards": true,
 		"me/find-friends": false,

@@ -11,7 +11,7 @@ var analytics = require( 'analytics' ),
 	sites = require( 'lib/sites-list' )(),
 	route = require( 'lib/route' ),
 	i18n = require( 'lib/mixins/i18n' ),
-	ThemeActions = require( 'lib/themes/actions' ),
+	ThemeActions = require( 'lib/themes/flux-actions' ),
 	Main = require( 'components/main' ),
 	upgradesActions = require( 'lib/upgrades/actions' ),
 	titleActions = require( 'lib/screen-title/actions' ),
@@ -200,6 +200,7 @@ module.exports = {
 			basePath = route.sectionify( context.path );
 
 		analytics.pageView.record( basePath, 'Checkout Thank You' );
+		context.layout.setState( { noSidebar: true } );
 
 		if ( ! lastTransaction ) {
 			page.redirect( '/plans' );

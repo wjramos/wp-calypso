@@ -29,30 +29,29 @@ function cancelPurchase( purchaseId, onComplete ) {
 
 function cancelPrivateRegistration( purchaseId, onComplete ) {
 	Dispatcher.handleViewAction( {
-		type: ActionTypes.PURCHASES_PRIVATE_REGISTRATION_CANCEL,
+		type: ActionTypes.PRIVACY_PROTECTION_CANCEL,
 		purchaseId
 	} );
 
 	wpcom.cancelPrivateRegistration( purchaseId, ( error, data ) => {
 		debug( error, data );
 
-		const canceledSuccessfully = ! error && data.success;
+		const success = ! error && data.success;
 
-		if ( canceledSuccessfully ) {
+		if ( success ) {
 			Dispatcher.handleServerAction( {
-				type: ActionTypes.PURCHASES_PRIVATE_REGISTRATION_CANCEL_COMPLETED,
-				purchaseId
+				type: ActionTypes.PRIVACY_PROTECTION_CANCEL_COMPLETED,
+				purchase: purchasesAssembler.createPurchaseObject( data.upgrade )
 			} );
 		} else {
 			Dispatcher.handleServerAction( {
-				type: ActionTypes.PURCHASES_PRIVATE_REGISTRATION_CANCEL_FAILED,
+				type: ActionTypes.PRIVACY_PROTECTION_CANCEL_FAILED,
 				purchaseId,
-				error: i18n.translate( 'There was a problem canceling this private registration. ' +
-						'Please try again later or contact support.' )
+				error: error.message || i18n.translate( 'There was a problem canceling this private registration. Please try again later or contact support.' )
 			} );
 		}
 
-		onComplete( canceledSuccessfully );
+		onComplete( success );
 	} );
 }
 
@@ -63,15 +62,15 @@ function deleteStoredCard( card, onComplete ) {
 	} );
 
 	wpcom.me().storedCardDelete( card, ( error, data ) => {
-		let success = false;
+		debug( error, data );
 
-		if ( data ) {
+		const success = Boolean( data );
+
+		if ( success ) {
 			Dispatcher.handleServerAction( {
 				type: ActionTypes.STORED_CARDS_DELETE_COMPLETED,
 				card
 			} );
-
-			success = true;
 		} else {
 			Dispatcher.handleServerAction( {
 				type: ActionTypes.STORED_CARDS_DELETE_FAILED,
@@ -84,7 +83,14 @@ function deleteStoredCard( card, onComplete ) {
 }
 
 function fetchSitePurchases( siteId ) {
-	function receiveSitePurchases( error, data ) {
+	Dispatcher.handleViewAction( {
+		type: ActionTypes.PURCHASES_SITE_FETCH,
+		siteId
+	} );
+
+	wpcom.sitePurchases( siteId, ( error, data ) => {
+		debug( error, data );
+
 		if ( error ) {
 			Dispatcher.handleServerAction( {
 				type: ActionTypes.PURCHASES_SITE_FETCH_FAILED,
@@ -94,17 +100,10 @@ function fetchSitePurchases( siteId ) {
 			Dispatcher.handleServerAction( {
 				type: ActionTypes.PURCHASES_SITE_FETCH_COMPLETED,
 				siteId,
-				purchases: purchasesAssembler.createPurchasesArray( data.upgrades )
+				purchases: purchasesAssembler.createPurchasesArray( data )
 			} );
 		}
-	}
-
-	Dispatcher.handleViewAction( {
-		type: ActionTypes.PURCHASES_SITE_FETCH,
-		siteId
 	} );
-
-	wpcom.siteUpgrades( siteId, receiveSitePurchases );
 }
 
 function fetchStoredCards() {
@@ -113,6 +112,8 @@ function fetchStoredCards() {
 	} );
 
 	wpcom.getStoredCards( ( error, data ) => {
+		debug( error, data );
+
 		if ( data ) {
 			Dispatcher.handleServerAction( {
 				type: ActionTypes.STORED_CARDS_FETCH_COMPLETED,
@@ -133,9 +134,7 @@ function fetchUserPurchases() {
 	} );
 
 	wpcom.me().purchases( ( error, data ) => {
-		const purchases = purchasesAssembler.createPurchasesArray( data );
-
-		debug( purchases );
+		debug( error, data );
 
 		if ( error ) {
 			Dispatcher.handleServerAction( {
@@ -145,7 +144,7 @@ function fetchUserPurchases() {
 		} else {
 			Dispatcher.handleServerAction( {
 				type: ActionTypes.PURCHASES_USER_FETCH_COMPLETED,
-				purchases
+				purchases: purchasesAssembler.createPurchasesArray( data )
 			} );
 		}
 	} );

@@ -9,14 +9,16 @@ var React = require( 'react/addons' ),
  * Internal dependencies
  */
 var HeaderCake = require( 'components/header-cake' ),
-	SimpleNotice = require( 'notices/simple-notice' ),
+	Notice = require( 'components/notice' ),
 	ActionPanel = require( 'my-sites/site-settings/action-panel' ),
 	ActionPanelTitle = require( 'my-sites/site-settings/action-panel/title' ),
 	ActionPanelBody = require( 'my-sites/site-settings/action-panel/body' ),
 	ActionPanelFigure = require( 'my-sites/site-settings/action-panel/figure' ),
 	ActionPanelFooter = require( 'my-sites/site-settings/action-panel/footer' ),
+	Button = require( 'components/button' ),
 	Dialog = require( 'components/dialog' ),
 	config = require( 'config' ),
+	Gridicon = require ( 'components/gridicon' ),
 	SiteListActions = require( 'lib/sites-list/actions' );
 
 module.exports = React.createClass( {
@@ -51,17 +53,17 @@ module.exports = React.createClass( {
 			deleteButtons, strings;
 
 		deleteButtons = [
-			<button
-				className="button"
+			<Button
 				onClick={ this._closeDialog }>{
 					this.translate( 'Cancel' )
-			}</button>,
-			<button
-				className="button is-destructive"
+			}</Button>,
+			<Button
+				primary
+				scary
 				disabled={ deleteDisabled }
 				onClick={ this._deleteSite }>{
 					this.translate( 'Delete this Site' )
-			}</button>
+			}</Button>
 		];
 
 		strings = {
@@ -94,21 +96,21 @@ module.exports = React.createClass( {
 						}</p>
 					</ActionPanelBody>
 					<ActionPanelFooter>
-						<a
-							className="button"
+						<Button
+							className="settings-action-panel__export-button"
 							disabled={ ! this.state.site }
 							onClick={ this._checkSiteLoaded }
 							href={ exportLink }
 							target={ exportTarget }>
 							{ strings.exportContent }
-							<span className="noticon noticon-external settings-action-panel__footer-button-icon"></span>
-						</a>
+							<Gridicon icon="external" />
+						</Button>
 					</ActionPanelFooter>
 				</ActionPanel>
 				<ActionPanel>
 					<ActionPanelTitle>{ strings.deleteSite }</ActionPanelTitle>
 					<ActionPanelBody>
-						<SimpleNotice status="is-warning" showDismiss={ false }>
+						<Notice status="is-warning" showDismiss={ false }>
 							{ this.translate( '{{strong}}%(domain)s{{/strong}} will be unavailable in the future.', {
 								components: {
 									strong: <strong />
@@ -117,7 +119,7 @@ module.exports = React.createClass( {
 									domain: site.domain
 								}
 							} ) }
-						</SimpleNotice>
+						</Notice>
 						<ActionPanelFigure>
 							<h3 className="delete-site__content-list-header">{ this.translate( 'These items will be deleted' ) }</h3>
 							<ul className="delete-site__content-list">
@@ -144,13 +146,13 @@ module.exports = React.createClass( {
 						<p><a className="settings-action-panel__body-text-link" href="https://en.support.wordpress.com/contact" target="_blank">{ strings.contactSupport }</a></p>
 					</ActionPanelBody>
 					<ActionPanelFooter>
-						<button
-							className="button is-dangerous"
+						<Button
+							scary
 							disabled={ ! this.state.site }
 							onClick={ this._showDialog }>
-							<span className="noticon noticon-trash settings-action-panel__footer-button-icon"></span>
+							<Gridicon icon="trash" />
 							{ strings.deleteSite }
-						</button>
+						</Button>
 					</ActionPanelFooter>
 
 					<Dialog isVisible={ this.state.showDialog } buttons={ deleteButtons } className="delete-site__confirm-dialog">
@@ -186,10 +188,13 @@ module.exports = React.createClass( {
 	},
 
 	_deleteSite: function() {
-		var site = this.state.site;
-		SiteListActions.deleteSite( site );
-		window.scrollTo( 0, 0 );
-		page( '/stats' );
+		this.setState( { showDialog: false } );
+
+		SiteListActions.deleteSite( this.state.site, function( success ) {
+			if ( success ) {
+				page.redirect( '/stats' );
+			}
+		}.bind( this ) );
 	},
 
 	_updateSite: function() {

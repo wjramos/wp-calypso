@@ -23,8 +23,8 @@ var actions = require( 'lib/posts/actions' ),
 	EditorTitleContainer = require( 'post-editor/editor-title/container' ),
 	EditorPageSlug = require( 'post-editor/editor-page-slug' ),
 	Gridicon = require( 'components/gridicon' ),
-	NoticeArrowLink = require( 'notices/arrow-link' ),
-	SimpleNotice = require( 'notices/simple-notice' ),
+	NoticeAction = require( 'components/notice/notice-action' ),
+	Notice = require( 'components/notice' ),
 	protectForm = require( 'lib/mixins/protect-form' ),
 	TinyMCE = require( 'components/tinymce' ),
 	EditorWordCount = require( 'post-editor/editor-word-count' ),
@@ -238,21 +238,21 @@ var PostEditor = React.createClass( {
 
 		if ( this.state.notice.link ) {
 			arrowLink = (
-				<NoticeArrowLink href={ this.state.notice.link }>
+				<NoticeAction href={ this.state.notice.link } external={ true }>
 					{ this.state.notice.action }
-				</NoticeArrowLink>
+				</NoticeAction>
 			);
 		}
 
 		return (
-			<SimpleNotice
+			<Notice
 				status={ 'is-' + this.state.notice.type }
 				showDismiss={ this.state.notice.type === 'success' ? false : true }
-				onClick={ this.onNoticeClick }
+				onDismissClick={ this.onNoticeClick }
 				className="post-editor__notice"
 				text={ this.state.notice.text }>
 				{ arrowLink }
-			</SimpleNotice>
+			</Notice>
 		);
 	},
 
@@ -313,6 +313,7 @@ var PostEditor = React.createClass( {
 								onTitleClick={ this.toggleSidebar }
 								showAllActionsMenu={ false }
 								siteID={ site ? site.ID : null }
+								selectedId={ this.state.post && this.state.post.ID || null }
 							/>
 						: <div>
 							<EditorGroundControl

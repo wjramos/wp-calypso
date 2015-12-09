@@ -14,6 +14,7 @@ import DropdownItem from 'components/select-dropdown/item';
 import FormTextarea from 'components/forms/form-textarea';
 import FormTextInput from 'components/forms/form-text-input';
 import FormButton from 'components/forms/form-button';
+import SelectSite from 'me/select-site';
 
 module.exports = React.createClass( {
 	displayName: 'HelpContactForm',
@@ -21,19 +22,25 @@ module.exports = React.createClass( {
 	mixins: [ React.addons.LinkedStateMixin, React.addons.PureRenderMixin ],
 
 	propTypes: {
+		formDescription: React.PropTypes.node,
 		buttonLabel: React.PropTypes.string.isRequired,
 		onSubmit: React.PropTypes.func.isRequired,
 		showHowCanWeHelpField: React.PropTypes.bool,
 		showHowYouFeelField: React.PropTypes.bool,
 		showSubjectField: React.PropTypes.bool,
+		showSiteField: React.PropTypes.bool,
+		siteFilter: React.PropTypes.func,
+		siteList: React.PropTypes.object,
 		disabled: React.PropTypes.bool
 	},
 
 	getDefaultProps: function() {
 		return {
+			formDescription: '',
 			showHowCanWeHelpField: false,
 			showHowYouFeelField: false,
 			showSubjectField: false,
+			showSiteField: false,
 			disabled: false
 		}
 	},
@@ -43,12 +50,20 @@ module.exports = React.createClass( {
 	 * @return {Object} An object representing our initial state
 	 */
 	getInitialState: function() {
+		const { showSiteField, siteList } = this.props;
+
 		return {
 			howCanWeHelp: 'gettingStarted',
 			howYouFeel: 'unspecified',
 			message: '',
-			subject: ''
+			subject: '',
+			site: showSiteField ? siteList.getLastSelectedSite() || siteList.getPrimary() : null
 		};
+	},
+
+	setSite: function( event ) {
+		const site = this.props.siteList.getSite( parseInt( event.target.value, 10 ) );
+		this.setState( { site: site } );
 	},
 
 	/**
@@ -124,9 +139,9 @@ module.exports = React.createClass( {
 	 */
 	render: function() {
 		var howCanWeHelpOptions = [
-				{ value: 'gettingStarted', label: this.translate( 'Help getting started' ), subtext: this.translate( 'Can you show me how to...' ) },
-				{ value: 'somethingBroken', label: this.translate( 'Something is broken' ), subtext: this.translate( 'Can you check this out...' ) },
-				{ value: 'suggestion', label: this.translate( 'I have a suggestion' ), subtext: this.translate( 'I think it would be cool if...' ) }
+				{ value: 'gettingStarted', label: this.translate( 'Help getting started' ), subtext: this.translate( 'Can you show me how to…' ) },
+				{ value: 'somethingBroken', label: this.translate( 'Something is broken' ), subtext: this.translate( 'Can you check this out…' ) },
+				{ value: 'suggestion', label: this.translate( 'I have a suggestion' ), subtext: this.translate( 'I think it would be cool if…' ) }
 			],
 			howYouFeelOptions = [
 				{ value: 'unspecified', label: this.translate( "I'd rather not" ) },
@@ -137,30 +152,44 @@ module.exports = React.createClass( {
 				{ value: 'panicked', label: this.translate( 'Panicked' ) }
 			];
 
-		const { buttonLabel, showHowCanWeHelpField, showHowYouFeelField, showSubjectField } = this.props;
+		const { formDescription, buttonLabel, showHowCanWeHelpField, showHowYouFeelField, showSubjectField, showSiteField, siteList, siteFilter } = this.props;
 
 		return (
 			<div className="help-contact-form">
-				{ showHowCanWeHelpField ? (
+				{ formDescription && ( <p>{ formDescription }</p> ) }
+
+				{ showHowCanWeHelpField && (
 					<div>
 						<FormLabel>{ this.translate( 'How can we help?' ) }</FormLabel>
 						{ this.renderFormSelection( 'howCanWeHelp', howCanWeHelpOptions ) }
 					</div>
-				) : null }
+				) }
 
-				{ showHowYouFeelField ? (
+				{ showHowYouFeelField && (
 					<div>
 						<FormLabel>{ this.translate( 'Mind sharing how you feel?' ) }</FormLabel>
 						{ this.renderFormSelection( 'howYouFeel', howYouFeelOptions ) }
 					</div>
-				) : null }
+				) }
 
-				{ showSubjectField ? (
+				{ showSiteField && (
+					<div>
+						<FormLabel>{ this.translate( 'Which site do you need help with?' ) }</FormLabel>
+						<SelectSite
+							className="help-contact-form__site-selection"
+							sites={ siteList }
+							filter={ siteFilter }
+							value={ this.state.site.ID }
+							onChange={ this.setSite } />
+					</div>
+				) }
+
+				{ showSubjectField && (
 					<div className="help-contact-form__subject">
 						<FormLabel>{ this.translate( 'Subject' ) }</FormLabel>
 						<FormTextInput valueLink={ this.linkState( 'subject' ) } />
 					</div>
-				) : null }
+				) }
 
 				<FormLabel>{ this.translate( 'What are you trying to do?' ) }</FormLabel>
 				<FormTextarea valueLink={ this.linkState( 'message' ) } placeholder={ this.translate( 'Please be descriptive' ) }></FormTextarea>

@@ -42,6 +42,8 @@ var config = require( 'config' ),
 	Layout,
 	LoggedOutLayout;
 
+import { displayInviteAccepted } from 'lib/invites/actions';
+
 function init() {
 	var i18nLocaleStringsObject = null;
 
@@ -169,6 +171,8 @@ function boot() {
 			translatorInvitation: translatorInvitation
 		} ), document.getElementById( 'wpcom' ) );
 	} else {
+		analytics.setSuperProps( superProps );
+
 		if ( config.isEnabled( 'oauth' ) ) {
 			LoggedOutLayout = require( 'layout/logged-out-oauth' );
 		} else {
@@ -227,6 +231,11 @@ function boot() {
 			nuxWelcome.setWelcome( viewport.isDesktop() );
 		} else {
 			nuxWelcome.clearTempWelcome();
+		}
+
+		if ( context.query.invite_accepted ) {
+			displayInviteAccepted( parseInt( context.query.invite_accepted ) );
+			page( context.pathname );
 		}
 
 		// Bump general stat tracking overall Newdash usage

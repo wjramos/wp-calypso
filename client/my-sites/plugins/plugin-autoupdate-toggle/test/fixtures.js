@@ -3,7 +3,9 @@ module.exports = {
 		slug: 'test',
 		domain: '',
 		name: '',
-		canUpdateFiles: true
+		canUpdateFiles: true,
+		options: { file_mod_disabled: false },
+		jetpack: true
 	},
 	plugin: { slug: 'test' },
 	notices: {

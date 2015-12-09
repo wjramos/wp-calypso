@@ -21,7 +21,7 @@ function getStateFromStores( props ) {
 	let domains;
 
 	if ( props.selectedSite ) {
-		domains = DomainsStore.getForSite( props.selectedSite.ID );
+		domains = DomainsStore.getBySite( props.selectedSite.ID );
 	}
 
 	return {
@@ -45,7 +45,7 @@ module.exports = React.createClass( {
 		sites: React.PropTypes.object.isRequired
 	},
 
-	mixins: [ observe( 'productsList', 'sites' ) ],
+	mixins: [ observe( 'productsList' ) ],
 
 	componentWillMount() {
 		this.loadDomains();

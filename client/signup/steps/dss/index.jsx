@@ -14,6 +14,8 @@ import StepWrapper from 'signup/step-wrapper';
 import ThemeHelper from 'lib/themes/helpers';
 import DynamicScreenshotsActions from 'lib/dss/actions';
 import DSSImageStore from 'lib/dss/image-store';
+import ThemePreviewStore from 'lib/dss/preview-store';
+import ImagePreloader from 'components/image-preloader';
 
 const debug = debugFactory( 'calypso:dss' );
 
@@ -38,16 +40,83 @@ export default React.createClass( {
 		};
 	},
 
+	getInitialState() {
+		return {
+			isLoading: false,
+			renderComplete: false,
+			markupAndStyles: {},
+			dssImage: null
+		};
+	},
+
+	componentWillMount() {
+		ThemePreviewStore.on( 'change', this.updateMarkup );
+		DSSImageStore.on( 'change', this.updateScreenshots );
+		this.loadThemePreviews();
+	},
+
+	componentWillUnmount() {
+		ThemePreviewStore.off( 'change', this.updateMarkup );
+		DSSImageStore.off( 'change', this.updateScreenshots );
+	},
+
+	componentWillReceiveProps() {
+		this.loadThemePreviews();
+	},
+
+	loadThemePreviews() {
+		debug( 'loading theme previews for these themes', this.props.themes );
+		this.props.themes.map( theme => DynamicScreenshotsActions.fetchThemePreview( 'pub/' + ThemeHelper.getSlugFromName( theme ) ) );
+	},
+
+	updateMarkup() {
+		this.setState( { markupAndStyles: ThemePreviewStore.get() } );
+	},
+
+	updateScreenshots() {
+		const { isLoading, lastKey, imageResultsByKey } = DSSImageStore.get();
+		// If there is no search currently happening or no results for a current search...
+		if ( ! imageResultsByKey[ lastKey ] ) {
+			return this.setState( { isLoading, renderComplete: false, dssImage: null } );
+		}
+		const dssImage = imageResultsByKey[ lastKey ];
+		this.setState( { isLoading, dssImage, renderComplete: false } );
+	},
+
+	dssImageLoaded() {
+		debug( 'image preloading complete' );
+		this.setState( { renderComplete: true } );
+	},
+
 	handleSearch( searchString ) {
-		debug( 'processing search for', searchString );
 		if ( ! searchString ) {
 			return DynamicScreenshotsActions.resetScreenshots();
 		}
-		const { imageResultsByKey } = DSSImageStore.get();
-		if ( imageResultsByKey[ searchString ] ) {
-			return DynamicScreenshotsActions.updateScreenshotsFor( searchString );
+		const normalizedSearchString = searchString.toLowerCase().trim();
+		if ( normalizedSearchString.length < 3 ) {
+			return;
 		}
-		DynamicScreenshotsActions.fetchDSSImageFor( searchString );
+		debug( 'processing search for', normalizedSearchString );
+		const { imageResultsByKey } = DSSImageStore.get();
+		if ( imageResultsByKey[ normalizedSearchString ] ) {
+			return DynamicScreenshotsActions.updateScreenshotsFor( normalizedSearchString );
+		}
+		DynamicScreenshotsActions.fetchDSSImageFor( normalizedSearchString );
+	},
+
+	renderImageLoader() {
+		if ( this.state.renderComplete ) {
+			return '';
+		}
+		debug( 'preloading image', this.state.dssImage.url );
+		const placeholder = <div>…</div>;
+		return (
+			<ImagePreloader
+				className="dss-theme-selection__image-preloader"
+				onLoad={ this.dssImageLoaded }
+				src={ this.state.dssImage.url }
+				placeholder={ placeholder } />
+		);
 	},
 
 	renderContent() {
@@ -58,6 +127,7 @@ export default React.createClass( {
 					<SearchCard id="dss-theme-selection__search__field"
 						autoFocus={ true }
 						delaySearch={ true }
+						delayTimeout={ 450 }
 						placeholder={ this.translate( 'e.g., games' ) }
 						onSearch={ this.handleSearch }
 					/>
@@ -71,6 +141,10 @@ export default React.createClass( {
 									themeName={ theme }
 									themeSlug={ ThemeHelper.getSlugFromName( theme ) }
 									themeRepoSlug={ 'pub/' + ThemeHelper.getSlugFromName( theme ) }
+									isLoading={ this.state.isLoading }
+									dssImage={ this.state.dssImage }
+									markupAndStyles={ this.state.markupAndStyles[ 'pub/' + ThemeHelper.getSlugFromName( theme ) ] }
+									renderComplete={ this.state.renderComplete }
 									{ ...this.props }/>;
 							} ) }
 						</div>
@@ -84,6 +158,7 @@ export default React.createClass( {
 						}
 					} ) }
 				</p>
+				{ this.state.dssImage ? this.renderImageLoader() : '' }
 			</div>
 		);
 	},

@@ -16,6 +16,15 @@ module.exports = {
 		},
 		defaultVariation: 'singlePurchaseFlow'
 	},
+	verticalSurvey: {
+		datestamp: '20151202',
+		variations: {
+			noSurvey: 12,
+			oneStep: 44,
+			twoStep: 44
+		},
+		defaultVariation: 'noSurvey'
+	},
 	translatorInvitation: {
 		datestamp: '20150910',
 		variations: {
@@ -36,15 +45,6 @@ module.exports = {
 			originalB: 50
 		},
 		defaultVariation: 'originalA'
-	},
-	nuxTrampoline: {
-		datestamp: '20151113',
-		variations: {
-			main: 10,
-			'landing-main': 10,
-			notTested: 80
-		},
-		defaultVariation: 'main'
 	},
 	businessPluginsNudge: {
 		datestamp: '20151119',
