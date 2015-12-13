@@ -188,4 +188,12 @@ if ( config.isEnabled( 'mailing-lists/unsubscribe' ) ) {
 	} );
 }
 
+if ( config.isEnabled( 'hello-world' ) ) {
+    sections.push( {
+        name: 'hello-world',
+        paths: [ '/hello-world' ],
+        module: 'my-sites/hello-world'
+    } );
+}
+
 module.exports = sections;

@@ -24,6 +24,7 @@
 	"facebook_api_key": "249643311490",
 	"discover_blog_id": 53424024,
 	"features": {
+		"hello-world": true,
 		"code-splitting": true,
 
 		"reader": true,
