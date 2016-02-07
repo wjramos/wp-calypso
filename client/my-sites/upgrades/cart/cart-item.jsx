@@ -7,13 +7,16 @@ var React = require( 'react' );
  * Internal dependencies
  */
 var analytics = require( 'analytics' ),
-	canRemoveFromCart = require( 'lib/products-values' ).canRemoveFromCart,
+	canRemoveFromCart = require( 'lib/cart-values' ).canRemoveFromCart,
 	cartItems = require( 'lib/cart-values' ).cartItems,
 	getIncludedDomain = cartItems.getIncludedDomain,
 	isCredits = require( 'lib/products-values' ).isCredits,
 	isDomainProduct = require( 'lib/products-values' ).isDomainProduct,
 	isGoogleApps = require( 'lib/products-values' ).isGoogleApps,
-	upgradesActions = require( 'lib/upgrades/actions' );
+	upgradesActions = require( 'lib/upgrades/actions' ),
+	abtest = require( 'lib/abtest' ).abtest,
+	{ isPremium, isBusiness } = require( 'lib/products-values' ),
+	isTheme = require( 'lib/products-values' ).isTheme;
 
 module.exports = React.createClass( {
 	displayName: 'CartItem',
@@ -51,23 +54,33 @@ module.exports = React.createClass( {
 		} );
 	},
 
+	monthlyPrice: function() {
+		const { cost, currency } = this.props.cartItem,
+			isInSignup = this.props.cartItem.extra && this.props.cartItem.extra.context === 'signup';
+		if ( ! isInSignup ||
+				! ( isPremium( this.props.cartItem ) || isBusiness( this.props.cartItem ) ) ||
+				abtest( 'monthlyPlanPricing' ) === 'yearly' ||
+				cost === 0 ) {
+			return null;
+		}
+
+		return this.translate( '(%(monthlyPrice)f %(currency)s x 12 months)', {
+			args: {
+				monthlyPrice: +( cost / 12 ).toFixed( 2 ),
+				currency
+			}
+		} );
+	},
+
 	getDomainPlanPrice: function() {
 		return <em>{ this.translate( 'Free with your plan' ) }</em>;
 	},
 
 	getFreeTrialPrice: function() {
-		var freeTrialText, renewalPrice;
+		var freeTrialText;
 
 		freeTrialText = this.translate( 'Free %(days)s Day Trial', {
 			args: { days: '14' }
-		} );
-
-		renewalPrice = this.translate( '(%(cost)s %(currency)s/%(billingPeriod)s)', {
-			args: {
-				cost: this.props.cartItem.orig_cost,
-				currency: this.props.cartItem.currency,
-				billingPeriod: 'year'
-			}
 		} );
 
 		return (
@@ -80,13 +93,14 @@ module.exports = React.createClass( {
 	getProductInfo() {
 		var domain = this.props.cartItem.meta || this.props.selectedSite.domain,
 			info = null;
-
 		if ( isGoogleApps( this.props.cartItem ) && this.props.cartItem.extra.google_apps_users ) {
 			info = this.props.cartItem.extra.google_apps_users.map( user => <div>{ user.email }</div> );
 		} else if ( isCredits( this.props.cartItem ) ) {
 			info = null
 		} else if ( getIncludedDomain( this.props.cartItem ) ) {
 			info = getIncludedDomain( this.props.cartItem );
+		} else if ( isTheme( this.props.cartItem ) ) {
+			info = this.props.selectedSite.domain;
 		} else {
 			info = domain;
 		}
@@ -106,6 +120,9 @@ module.exports = React.createClass( {
 				<div className="secondary-details">
 					<span className="product-price">
 						{ this.price() }
+					</span>
+					<span className="product-monthly-price">
+						{ this.monthlyPrice() }
 					</span>
 					{ this.removeButton() }
 				</div>
@@ -158,7 +175,7 @@ module.exports = React.createClass( {
 	},
 
 	removeButton: function() {
-		if ( canRemoveFromCart( this.props.cartItem ) ) {
+		if ( canRemoveFromCart( this.props.cart, this.props.cartItem ) ) {
 			return <button className="remove-item noticon noticon-close" onClick={ this.removeFromCart }></button>;
 		}
 	}

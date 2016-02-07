@@ -19,16 +19,14 @@ import HeaderCake from 'components/header-cake';
 import wpcomLib from 'lib/wp';
 import notices from 'notices';
 import siteList from 'lib/sites-list';
+import analytics from 'analytics';
 
 /**
  * Module variables
  */
-const noticeOptions = {
-	duration: 10000,
-	showDismiss: false
-};
 const wpcom = wpcomLib.undocumented();
 const sites = siteList();
+let savedContactForm = null;
 
 module.exports = React.createClass( {
 	displayName: 'HelpContact',
@@ -37,6 +35,7 @@ module.exports = React.createClass( {
 		olarkStore.on( 'change', this.updateOlarkState );
 		olarkEvents.on( 'api.chat.onOperatorsAway', this.onOperatorsAway );
 		olarkEvents.on( 'api.chat.onOperatorsAvailable', this.onOperatorsAvailable );
+		olarkEvents.on( 'api.chat.onCommandFromOperator', this.onCommandFromOperator );
 
 		sites.on( 'change', this.onSitesChanged );
 
@@ -55,6 +54,7 @@ module.exports = React.createClass( {
 		olarkStore.removeListener( 'change', this.updateOlarkState );
 		olarkEvents.off( 'api.chat.onOperatorsAway', this.onOperatorsAway );
 		olarkEvents.off( 'api.chat.onOperatorsAvailable', this.onOperatorsAvailable );
+		olarkEvents.off( 'api.chat.onCommandFromOperator', this.onCommandFromOperator );
 
 		if ( details.isConversing && ! isOperatorAvailable ) {
 			olarkActions.shrinkBox();
@@ -68,6 +68,7 @@ module.exports = React.createClass( {
 			olark: olarkStore.get(),
 			isSubmitting: false,
 			confirmation: null,
+			isChatEnded: false,
 			sitesInitialized: sites.initialized
 		};
 	},
@@ -84,8 +85,13 @@ module.exports = React.createClass( {
 		page( '/help' );
 	},
 
+	clearSavedContactForm: function() {
+		savedContactForm = null;
+	},
+
 	startChat: function( contactForm ) {
-		const { message, howCanWeHelp, howYouFeel, site } = contactForm;
+		const { message, howCanWeHelp, howYouFeel, siteSlug } = contactForm;
+		const site = sites.getSite( siteSlug );
 
 		// Intentionally not translated since only HE's will see this in the olark console as a notification.
 		const notifications = [
@@ -96,16 +102,22 @@ module.exports = React.createClass( {
 
 		notifications.forEach( olarkActions.sendNotificationToOperator );
 
+		analytics.tracks.recordEvent( 'calypso_help_live_chat_begin' );
+
 		this.sendMessageToOperator( message );
+
+		this.clearSavedContactForm();
 	},
 
 	submitKayakoTicket: function( contactForm ) {
-		const { subject, message, howCanWeHelp, howYouFeel } = contactForm;
+		const { subject, message, howCanWeHelp, howYouFeel, siteSlug } = contactForm;
 		const { locale } = this.state.olark;
+		const site = sites.getSite( siteSlug );
 
 		const ticketMeta = [
 			'How can you help: ' + howCanWeHelp,
-			'How I feel: ' + howYouFeel
+			'How I feel: ' + howYouFeel,
+			'Site I need help with: ' + ( site ? site.URL : 'N/A' )
 		];
 
 		const kayakoMessage = [ ...ticketMeta, '\n', message ].join( '\n' );
@@ -130,7 +142,11 @@ module.exports = React.createClass( {
 						'one of our Happiness Engineers shortly.' )
 				}
 			} );
+
+			analytics.tracks.recordEvent( 'calypso_help_contact_submit', { ticket_type: 'kayako' } );
 		} );
+
+		this.clearSavedContactForm();
 	},
 
 	submitSupportForumsTopic: function( contactForm ) {
@@ -162,7 +178,11 @@ module.exports = React.createClass( {
 					)
 				}
 			} );
+
+			analytics.tracks.recordEvent( 'calypso_help_contact_submit', { ticket_type: 'forum' } );
 		} );
+
+		this.clearSavedContactForm();
 	},
 
 	/**
@@ -198,33 +218,67 @@ module.exports = React.createClass( {
 		widgetInput.onkeydown( { keyCode: KEY_ENTER } );
 	},
 
-	onOperatorsAvailable: function() {
-		this.showOperatorAvailabilityNotice( true );
-	},
-
 	onOperatorsAway: function() {
-		this.showOperatorAvailabilityNotice( false );
-	},
+		const IS_UNAVAILABLE = false;
+		const { details } = this.state.olark;
 
-	showOperatorAvailabilityNotice: function( isAvailable ) {
-		const { isOlarkReady, isUserEligible, details } = this.state.olark;
-
-		// We check isOlarkReady because the operator availability events fire before the ready event to indicate if operators are available.
-		// Here we only care if the availability has changed while we were viewing the contact form
-		if ( ! isOlarkReady ) {
-			return;
+		if ( ! details.isConversing ) {
+			analytics.tracks.recordEvent( 'calypso_help_offline_form_display', {
+				form_type: 'kayako'
+			} );
 		}
 
-		if ( ! ( isUserEligible || details.isConversing ) ) {
-			// If the user is not currently chatting or the user is not eligible to chat then no need to show the notice
+		//Autofill the subject field since we will be showing it now that operators have went away.
+		this.autofillSubject();
+
+		this.showAvailabilityNotice( IS_UNAVAILABLE );
+	},
+
+	onOperatorsAvailable: function() {
+		const IS_AVAILABLE = true;
+
+		this.showAvailabilityNotice( IS_AVAILABLE );
+	},
+
+	showAvailabilityNotice( isAvailable ) {
+		const { isUserEligible, isOlarkReady } = this.state.olark;
+
+		if ( ! isOlarkReady || ! isUserEligible ) {
 			return;
 		}
 
 		if ( isAvailable ) {
-			notices.success( this.translate( 'Our Happiness Engineers have returned, chat with us.' ), noticeOptions );
+			notices.success( this.translate( 'Our Happiness Engineers have returned, chat with us.' ) );
 		} else {
-			notices.warning( this.translate( 'Sorry! We just missed you as our Happiness Engineers stepped away.' ), noticeOptions );
+			notices.warning( this.translate( 'Sorry! We just missed you as our Happiness Engineers stepped away.' ) );
 		}
+	},
+
+	/**
+	 * Auto fill the subject with the first five words contained in the message field of the contact form.
+	 */
+	autofillSubject: function() {
+		if ( ! savedContactForm || ! savedContactForm.message || savedContactForm.subject ) {
+			return;
+		}
+
+		const words = savedContactForm.message.split( /\s+/ );
+
+		savedContactForm = Object.assign( savedContactForm, { subject: words.slice( 0, 5 ).join( ' ' ) + '…' } );
+
+		this.forceUpdate();
+	},
+
+	onCommandFromOperator: function( event ) {
+		if ( event.command.name === 'end' ) {
+			this.setState( { isChatEnded: true } );
+		}
+	},
+
+	canShowChatbox: function() {
+		const { olark, isChatEnded } = this.state;
+
+		return isChatEnded || ( olark.details.isConversing && olark.isOperatorAvailable );
 	},
 
 	/**
@@ -242,10 +296,21 @@ module.exports = React.createClass( {
 		}
 
 		if ( ! ( olark.isOlarkReady && sitesInitialized ) ) {
-			return <div className="help-contact__placeholder" />;
+			return (
+				<div className="help-contact__placeholder">
+					<h4 className="help-contact__header">Loading contact form</h4>
+					<div className="help-contact__textarea" />
+
+					<h4 className="help-contact__header">Loading contact form</h4>
+					<div className="help-contact__textarea" />
+
+					<h4 className="help-contact__header">Loading contact form</h4>
+					<div className="help-contact__textarea" />
+				</div>
+			);
 		}
 
-		if ( olark.details.isConversing && olark.isOperatorAvailable ) {
+		if ( this.canShowChatbox() ) {
 			return <OlarkChatbox />;
 		}
 
@@ -256,8 +321,7 @@ module.exports = React.createClass( {
 				showHowCanWeHelpField: showKayakoVariation || showChatVariation,
 				showHowYouFeelField: showKayakoVariation || showChatVariation,
 				showSiteField: ( showKayakoVariation || showChatVariation ) && ( sites.get().length > 1 ),
-				siteList: sites,
-				siteFilter: site => ( site.visible && ! site.jetpack )
+				valueLink: { value: savedContactForm, requestChange: ( contactForm ) => savedContactForm = contactForm }
 			},
 			showChatVariation && {
 				onSubmit: this.startChat,
@@ -294,7 +358,7 @@ module.exports = React.createClass( {
 		return (
 			<Main className="help-contact">
 				<HeaderCake onClick={ this.backToHelp } isCompact={ true }>{ this.translate( 'Contact Us' ) }</HeaderCake>
-				<Card>
+				<Card className={ this.canShowChatbox() ? 'help-contact__chat-form' : 'help-contact__form' }>
 					{ this.getView() }
 				</Card>
 			</Main>

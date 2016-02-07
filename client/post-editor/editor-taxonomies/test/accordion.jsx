@@ -4,11 +4,12 @@ require( 'lib/react-test-env-setup' )();
 /**
  * External dependencies
  */
-var React = require( 'react/addons' ),
+var ReactDom = require( 'react-dom' ),
+	React = require( 'react' ),
 	ReactInjection = require( 'react/lib/ReactInjection' ),
 	mockery = require( 'mockery' ),
 	expect = require( 'chai' ).expect,
-	TestUtils = React.addons.TestUtils;
+	TestUtils = require( 'react-addons-test-utils' );
 
 /**
  * Internal dependencies
@@ -43,7 +44,7 @@ describe( 'EditorTaxonomiesAccordion', function() {
 
 	function render( postTaxonomiesProps ) {
 		unmount();
-		wrapper = React.render(
+		wrapper = ReactDom.render(
 			<CategoryListData siteId={ common.TEST_SITE_ID }>
 				<TagListData siteId={ common.TEST_SITE_ID }>
 					<TaxonomiesAccordion
@@ -59,7 +60,7 @@ describe( 'EditorTaxonomiesAccordion', function() {
 
 	function unmount() {
 		if ( wrapper ) {
-			React.unmountComponentAtNode( document.body );
+			ReactDom.unmountComponentAtNode( document.body );
 			wrapper = null;
 		}
 	}

@@ -85,7 +85,7 @@ module.exports = React.createClass( {
 		}
 
 		if ( ! this.props.site.canUpdateFiles && this.props.site.options.file_mod_disabled ) {
-			const reasons = utils.getSiteFileModDisableReason( this.props.site );
+			const reasons = utils.getSiteFileModDisableReason( this.props.site, 'modifyFiles' );
 			let html = [];
 
 			if ( reasons.length > 1 ) {
@@ -143,7 +143,7 @@ module.exports = React.createClass( {
 				disabledInfo={ getDisabledInfo }
 				className="plugin-remove-button__remove-link"
 			>
-				<a onClick={ this.removeAction } >
+				<a onClick={ this.removeAction } className="plugin-remove-button__remove-icon" >
 					<Gridicon icon="trash" size={ 18 } />
 				</a>
 			</PluginAction>

@@ -1,46 +1,52 @@
 // External dependencies
-const React = require( 'react' ),
-	times = require( 'lodash/utility/times' ),
-	trimLeft = require( 'lodash/string/trimLeft' ),
-	Immutable = require( 'immutable' ),
-	debounce = require( 'lodash/function/debounce' );
+import React from 'react';
+import times from 'lodash/utility/times';
+import trimLeft from 'lodash/string/trimLeft';
+import Immutable from 'immutable';
+import debounce from 'lodash/function/debounce';
+import classnames from 'classnames';
 
 // Internal dependencies
-const Main = require( 'components/main' ),
-	FeedSubscriptionStore = require( 'lib/reader-feed-subscriptions' ),
-	SiteStore = require( 'lib/reader-site-store' ),
-	FeedStore = require( 'lib/feed-store' ),
-	FeedSubscriptionActions = require( 'lib/reader-feed-subscriptions/actions' ),
-	EmptyContent = require( 'components/empty-content' ),
-	NoResults = require( 'my-sites/no-results' ),
-	InfiniteList = require( 'components/infinite-list' ),
-	SubscriptionPlaceholder = require( './placeholder' ),
-	SubscriptionListItem = require( './list-item' ),
-	Notice = require( 'components/notice' ),
-	stats = require( 'reader/stats' ),
-	Search = require( 'components/search' ),
-	URLSearch = require( 'lib/mixins/url-search' ),
-	FollowingEditSubscribeForm = require( './subscribe-form' ),
-	FeedSubscriptionErrorTypes = require( 'lib/reader-feed-subscriptions/constants' ).error,
-	MobileBackToSidebar = require( 'components/mobile-back-to-sidebar' ),
-	smartSetState = require( 'lib/react-smart-set-state' ),
-	escapeRegexp = require( 'escape-string-regexp' ),
-	FollowingEditSortControls = require( './sort-controls' ),
-	FollowingEditHelper = require( 'reader/following-edit/helper' );
+import Main from 'components/main';
+import FeedSubscriptionStore from 'lib/reader-feed-subscriptions';
+import SiteStore from 'lib/reader-site-store';
+import FeedStore from 'lib/feed-store';
+import FeedSubscriptionActions from 'lib/reader-feed-subscriptions/actions';
+import EmptyContent from 'components/empty-content';
+import NoResults from 'my-sites/no-results';
+import InfiniteList from 'components/infinite-list';
+import SubscriptionPlaceholder from './placeholder';
+import SubscriptionListItem from './list-item';
+import Notice from 'components/notice';
+import SearchCard from 'components/search-card';
+import URLSearch from 'lib/mixins/url-search';
+import FollowingEditSubscribeForm from './subscribe-form';
+import { error as FeedSubscriptionErrorTypes } from 'lib/reader-feed-subscriptions/constants';
+import MobileBackToSidebar from 'components/mobile-back-to-sidebar';
+import smartSetState from 'lib/react-smart-set-state';
+import escapeRegexp from 'escape-string-regexp';
+import FollowingEditSortControls from './sort-controls';
+import FeedDisplayHelper from 'reader/lib/feed-display-helper';
+import SectionHeader from 'components/section-header';
+import Button from 'components/button';
+const stats = require( 'reader/stats' );
 
 const initialLoadFeedCount = 20;
 
-var FollowingEdit = React.createClass( {
+const FollowingEdit = React.createClass( {
 
 	mixins: [ URLSearch ],
 
 	propTypes: {
 		initialFollowUrl: React.PropTypes.string,
-		search: React.PropTypes.string
+		search: React.PropTypes.string,
+		userSettings: React.PropTypes.object
 	},
 
 	getInitialState: function() {
-		return this.getStateFromStores();
+		return Object.assign( {
+			isAddingOpen: false
+		}, this.getStateFromStores() );
 	},
 
 	getDefaultProps: function() {
@@ -99,7 +105,7 @@ var FollowingEdit = React.createClass( {
 			const feed = FeedStore.get( item.get( 'feed_ID' ) ),
 				site = SiteStore.get( item.get( 'blog_ID' ) ),
 				phraseRe = new RegExp( escapeRegexp( phrase ), 'i' );
-			return item.get( 'URL' ).indexOf( phraseRe ) !== -1 ||
+			return item.get( 'URL' ).search( phraseRe ) !== -1 ||
 				( site && ( site.get( 'name' ) || '' ).search( phraseRe ) !== -1 ) ||
 				( site && ( site.get( 'URL' ) || '' ).search( phraseRe ) !== -1 ) ||
 				( feed && ( feed.name || '' ).search( phraseRe ) !== -1 ) ||
@@ -117,8 +123,8 @@ var FollowingEdit = React.createClass( {
 			return subscriptions.sortBy( function( subscription ) {
 				const feed = FeedStore.get( subscription.get( 'feed_ID' ) ),
 					site = SiteStore.get( subscription.get( 'blog_ID' ) ),
-					displayUrl = FollowingEditHelper.formatUrlForDisplay( subscription.get( 'URL' ) );
-				return trimLeft( FollowingEditHelper.getFeedTitle( site, feed, displayUrl ).toLowerCase() );
+					displayUrl = FeedDisplayHelper.formatUrlForDisplay( subscription.get( 'URL' ) );
+				return trimLeft( FeedDisplayHelper.getFeedTitle( site, feed, displayUrl ).toLowerCase() );
 			} );
 		}
 
@@ -200,6 +206,7 @@ var FollowingEdit = React.createClass( {
 
 	renderSubscription: function( subscription ) {
 		const subscriptionKey = this.getSubscriptionRef( subscription );
+		const isEmailBlocked = this.props.userSettings.getSetting( 'subscription_delivery_email_blocked' );
 
 		return (
 			<SubscriptionListItem
@@ -208,7 +215,8 @@ var FollowingEdit = React.createClass( {
 				subscription={ subscription }
 				onNotificationSettingsOpen={ this.handleNotificationSettingsOpen }
 				onNotificationSettingsClose={ this.handleNotificationSettingsClose }
-				openCards={ this.state.openCards } />
+				openCards={ this.state.openCards }
+				isEmailBlocked={ isEmailBlocked } />
 		);
 	},
 
@@ -244,14 +252,18 @@ var FollowingEdit = React.createClass( {
 	},
 
 	handleNewSubscriptionSearchClose: function() {
+		this.toggleAddSite();
+
 		if ( this.state.lastError && this.state.lastError.errorType === FeedSubscriptionErrorTypes.UNABLE_TO_FOLLOW ) {
 			this.setState( { isAttemptingFollow: false } );
 			FeedSubscriptionActions.dismissError( this.state.lastError );
 		}
 	},
 
-	handleFollow: function() {
+	handleFollow: function( newUrl ) {
+		this.toggleAddSite();
 		this.setState( { isAttemptingFollow: true } );
+		stats.recordFollow( newUrl );
 	},
 
 	renderUnfollowError: function() {
@@ -263,7 +275,6 @@ var FollowingEdit = React.createClass( {
 
 		return ( <Notice
 					status="is-error"
-					isCompact={ true }
 					showDismiss={ true }
 					onDismissClick={ this.dismissError }>
 					{ this.translate( 'Sorry - there was a problem unfollowing {{strong}}%(url)s{{/strong}}.', {
@@ -291,12 +302,21 @@ var FollowingEdit = React.createClass( {
 
 		return ( <Notice
 					status="is-error"
-					isCompact={ true }
 					showDismiss={ true }
 					onDismissClick={ this.dismissError }>
 					{ errorMessage }
 				</Notice>
 		);
+	},
+
+	toggleAddSite: function() {
+		this.setState( {
+			isAddingOpen: ! this.state.isAddingOpen
+		} );
+
+		if ( ! this.state.isAddingOpen ) {
+			this.refs['feed-search'].focus();
+		}
 	},
 
 	render: function() {
@@ -321,34 +341,52 @@ var FollowingEdit = React.createClass( {
 		}
 
 		if ( this.state.windowWidth && this.state.windowWidth > 960 ) {
-			searchPlaceholder = this.translate( 'Search your followed feeds' );
+			searchPlaceholder = this.translate( 'Search your followed sites' );
 		} else {
 			searchPlaceholder = this.translate( 'Search' );
 		}
 
+		const containerClasses = classnames( {
+			'is-adding': this.state.isAddingOpen
+		}, 'following-edit' );
+
 		return (
-			<Main className="following-edit">
+			<Main className={ containerClasses }>
 				<MobileBackToSidebar>
 					<h1>{ this.translate( 'Manage Followed Sites' ) }</h1>
 				</MobileBackToSidebar>
 				{ this.renderFollowError() }
 				{ this.renderUnfollowError() }
+
+				<SectionHeader className="following-edit__header" label={ this.translate( 'Sites' ) } count={ this.state.totalSubscriptions }>
+					<FollowingEditSortControls onSelectChange={ this.handleSortOrderChange } sortOrder={ this.state.sortOrder } />
+
+					<Button compact primary onClick={ this.toggleAddSite }>
+						{ this.translate( 'Follow Site' ) }
+					</Button>
+				</SectionHeader>
+
 				<FollowingEditSubscribeForm
 					onSearch={ this.handleNewSubscriptionSearch }
 					onSearchClose={ this.handleNewSubscriptionSearchClose }
 					onFollow={ this.handleFollow }
-					initialSearchString={ this.props.initialFollowUrl } />
-				<FollowingEditSortControls onSelectChange={ this.handleSortOrderChange } sortOrder={ this.state.sortOrder } />
-				<Search
+					initialSearchString={ this.props.initialFollowUrl }
+					ref="feed-search" />
+
+				<SearchCard
 					key="existingFeedSearch"
-					autoFocus={ false }
+					autoFocus={ true }
 					additionalClasses="following-edit__existing-feed-search"
 					placeholder={ searchPlaceholder }
-					onSearch={ this.doSearch } initialValue={ this.props.search } delaySearch={ true } ref="url-search" />
+					onSearch={ this.doSearch }
+					initialValue={ this.props.search }
+					delaySearch={ true }
+					ref="url-search" />
 				{ this.state.isAttemptingFollow && ! this.state.lastError ? <SubscriptionPlaceholder key={ 'placeholder-add-feed' } /> : null }
-				{ subscriptionsToDisplay.length === 0 && this.props.search ?
+				{ subscriptionsToDisplay.length === 0 && this.props.search && ! this.state.isLoading ?
 					<NoResults text={ this.translate( 'No subscriptions match that search.' ) } /> :
-				<InfiniteList role="main"
+
+				<InfiniteList className="following-edit__sites"
 					items={ subscriptionsToDisplay }
 					lastPage={ this.state.isLastPage }
 					fetchingNextPage={ this.state.isLoading }

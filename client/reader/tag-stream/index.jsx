@@ -1,5 +1,4 @@
-var React = require( 'react' ),
-	toTitleCase = require( 'to-title-case' );
+var React = require( 'react' );
 
 var FollowingStream = require( 'reader/following-stream' ),
 	EmptyContent = require( './empty' ),
@@ -7,9 +6,14 @@ var FollowingStream = require( 'reader/following-stream' ),
 	ReaderTagActions = require( 'lib/reader-tags/actions' ),
 	TagSubscriptions = require( 'lib/reader-tags/subscriptions' ),
 	StreamHeader = require( 'reader/stream-header' ),
-	stats = require( 'reader/stats' );
+	stats = require( 'reader/stats' ),
+	HeaderBack = require( 'reader/header-back' );
 
 var FeedStream = React.createClass( {
+
+	propTypes: {
+		tag: React.PropTypes.string
+	},
 
 	getInitialState: function() {
 		return {
@@ -50,8 +54,8 @@ var FeedStream = React.createClass( {
 			ReaderTagActions.fetchTag( this.props.tag );
 			return this.translate( 'Loading Tag' );
 		}
-		// this crazy statement deals with strings that fail toTitleCase, like Japanese
-		return toTitleCase( tag.title || tag.slug ) || tag.title;
+
+		return tag.display_name || tag.slug;
 	},
 
 	isSubscribed: function() {
@@ -66,19 +70,22 @@ var FeedStream = React.createClass( {
 		var tag = ReaderTags.get( this.props.tag );
 		ReaderTagActions[ isFollowing ? 'follow' : 'unfollow' ]( tag );
 		stats.recordAction( isFollowing ? 'followed_topic' : 'unfollowed_topic' );
-		stats.recordGaEvent( isFollowing ? 'Clicked Follow Topic' : 'Clicked Unfollow Topic', tag );
-		stats.recordTrack( isFollowing ? 'calypso_reader_reader_tag_followed' : 'calypso_reader_reader_tag_unfollowed' );
+		stats.recordGaEvent( isFollowing ? 'Clicked Follow Topic' : 'Clicked Unfollow Topic', tag.slug );
+		stats.recordTrack( isFollowing ? 'calypso_reader_reader_tag_followed' : 'calypso_reader_reader_tag_unfollowed', {
+			tag: tag.slug
+		} );
 	},
 
 	render: function() {
 		var tag = ReaderTags.get( this.props.tag ),
-			emptyContent = ( <EmptyContent /> );
+			emptyContent = ( <EmptyContent tag={ this.props.tag } /> );
 
 		if ( this.props.setPageTitle ) {
 			this.props.setPageTitle( this.state.title );
 		}
 		return (
 			<FollowingStream { ...this.props } listName={ this.state.title } emptyContent={ emptyContent } showFollowInHeader={ true } >
+				{ this.props.showBack && <HeaderBack /> }
 				<StreamHeader
 					isPlaceholder={ ! tag }
 					icon={ <svg className="gridicon gridicon__tag" height="32" width="32" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g><path d="M16 7H5c-1.105 0-2 .896-2 2v6c0 1.104.895 2 2 2h11l5-5-5-5z"/></g></svg> }

@@ -1,18 +1,22 @@
-var React = require( 'react' );
+/**
+ * External dependencies
+ */
+var React = require( 'react' ),
+	PureRenderMixin = require( 'react-pure-render/mixin' );
 
+/**
+ * Internal dependencies
+ */
 var FollowButtonContainer = require( 'components/follow-button' ),
 	FollowButton = require( 'components/follow-button/button' ),
 	stats = require( 'reader/stats' );
 
 var ReaderFollowButton = React.createClass( {
 
-	mixins: [ React.addons.PureRenderMixin ],
+	mixins: [ PureRenderMixin ],
 
 	recordFollowToggle: function( isFollowing ) {
-		stats.recordAction( isFollowing ? 'followed_blog' : 'unfollowed_blog' );
-		stats.recordGaEvent( isFollowing ? 'Clicked Follow Blog' : 'Clicked Unfollow Blog', this.props.location );
-
-		stats[ isFollowing ? 'recordFollow' : 'recordUnfollow' ]();
+		stats[ isFollowing ? 'recordFollow' : 'recordUnfollow' ]( this.props.siteUrl );
 
 		if ( this.props.onFollowToggle ) {
 			this.props.onFollowToggle();

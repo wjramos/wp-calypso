@@ -5,8 +5,9 @@ require( 'lib/react-test-env-setup' )();
  * External dependencies
  */
 var expect = require( 'chai' ).expect,
-	React = require( 'react/addons' ),
-	TestUtils = React.addons.TestUtils,
+	ReactDom = require( 'react-dom' ),
+	React = require( 'react' ),
+	TestUtils = require( 'react-addons-test-utils' ),
 	toArray = require( 'lodash/lang/toArray' ),
 	mockery = require( 'mockery' );
 
@@ -65,7 +66,7 @@ describe( 'MediaLibraryList item selection', function() {
 	} );
 
 	afterEach( function() {
-		React.unmountComponentAtNode( document.body );
+		ReactDom.unmountComponentAtNode( document.body );
 	} );
 
 	after( function() {
@@ -75,7 +76,7 @@ describe( 'MediaLibraryList item selection', function() {
 
 	context( 'multiple selection', function() {
 		beforeEach( function() {
-			var tree = React.render(
+			var tree = ReactDom.render(
 				<MediaLibrarySelectedData siteId={ DUMMY_SITE_ID }>
 					<MediaList site={ { ID: DUMMY_SITE_ID } } media={ fixtures.media } mediaScale={ 0.24 } />
 				</MediaLibrarySelectedData>,
@@ -154,7 +155,7 @@ describe( 'MediaLibraryList item selection', function() {
 
 	context( 'single selection', function() {
 		beforeEach( function() {
-			var tree = React.render(
+			var tree = ReactDom.render(
 				<MediaLibrarySelectedData siteId={ DUMMY_SITE_ID }>
 					<MediaList site={ { ID: DUMMY_SITE_ID } } media={ fixtures.media } mediaScale={ 0.24 } single />
 				</MediaLibrarySelectedData>,

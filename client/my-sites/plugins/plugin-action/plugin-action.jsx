@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-var React = require( 'react/addons' ),
+var React = require( 'react' ),
 	classNames = require( 'classnames' );
 
 /**
@@ -90,7 +90,7 @@ module.exports = React.createClass( {
 
 	render: function() {
 		return (
-			<div className={ classNames( 'plugin-action', this.props.className ) }>
+			<div className={ classNames( 'plugin-action', { 'is-disabled': this.props.disabled, 'has-disabled-info': !! this.props.disabledInfo }, this.props.className ) }>
 				{ this.renderInner() }
 			</div>
 		);

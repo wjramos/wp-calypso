@@ -5,7 +5,8 @@ var take = require( 'lodash/array/take' ),
 	clone = require( 'lodash/lang/clone' ),
 	contains = require( 'lodash/collection/contains' ),
 	map = require( 'lodash/collection/map' ),
-	React = require( 'react/addons' ),
+	React = require( 'react' ),
+	PureRenderMixin = require( 'react-pure-render/mixin' ),
 	without = require( 'lodash/array/without' ),
 	each = require( 'lodash/collection/each' ),
 	identity = require( 'lodash/utility/identity' ),
@@ -24,7 +25,8 @@ var TokenField = React.createClass( {
 		suggestions: React.PropTypes.array,
 		maxSuggestions: React.PropTypes.number,
 		value: React.PropTypes.array,
-		valueTransform: React.PropTypes.func,
+		displayTransform: React.PropTypes.func,
+		saveTransform: React.PropTypes.func,
 		onChange: React.PropTypes.func
 	},
 
@@ -33,12 +35,15 @@ var TokenField = React.createClass( {
 			suggestions: Object.freeze( [] ),
 			maxSuggestions: 100,
 			value: Object.freeze( [] ),
-			valueTransform: identity,
+			displayTransform: identity,
+			saveTransform: function( token ) {
+				return token.trim();
+			},
 			onChange: function() {}
 		};
 	},
 
-	mixins: [ React.addons.PureRenderMixin ],
+	mixins: [ PureRenderMixin ],
 
 	getInitialState: function() {
 		return {
@@ -68,19 +73,31 @@ var TokenField = React.createClass( {
 		} );
 
 		return (
-			<div className={ classes } tabIndex="-1" onKeyDown={ this._onKeyDown } onBlur={ this._onBlur } onFocus={ this._onFocus }>
-				<div ref="tokensAndInput" className="token-field__input-container" onClick={ this._onClick } tabIndex="-1">
+			<div ref="main"
+				className={ classes }
+				tabIndex="-1"
+				onKeyDown={ this._onKeyDown }
+				onKeyPress={ this._onKeyPress }
+				onBlur={ this._onBlur }
+				onFocus={ this._onFocus }
+			>
+				<div ref="tokensAndInput"
+					className="token-field__input-container"
+					onClick={ this._onClick }
+					tabIndex="-1"
+				>
 					{ this._renderTokensAndInput() }
 				</div>
 				<SuggestionsList
-					match={ this.state.incompleteTokenValue }
-					valueTransform={ this.props.valueTransform }
+					match={ this.props.saveTransform( this.state.incompleteTokenValue ) }
+					displayTransform={ this.props.displayTransform }
 					suggestions={ this._getMatchingSuggestions() }
 					selectedIndex={ this.state.selectedSuggestionIndex }
 					scrollIntoView={ this.state.selectedSuggestionScroll }
 					isExpanded={ this.state.isActive }
 					onHover={ this._onSuggestionHovered }
-					onSelect={ this._onSuggestionSelected } />
+					onSelect={ this._onSuggestionSelected }
+				/>
 			</div>
 		);
 	},
@@ -98,7 +115,7 @@ var TokenField = React.createClass( {
 			<Token
 				key={ 'token-' + token }
 				value={ token }
-				valueTransform={ this.props.valueTransform }
+				displayTransform={ this.props.displayTransform }
 				onClickRemove={ this._onTokenClickRemove }
 			/>
 		);
@@ -126,45 +143,49 @@ var TokenField = React.createClass( {
 	},
 
 	_onBlur: function( event ) {
-		var stillActive = this.getDOMNode().contains( event.relatedTarget );
+		var blurSource = event.relatedTarget ||
+			event.nativeEvent.explicitOriginalTarget || // FF
+			document.activeElement; // IE11
+
+		var stillActive = this.refs.main.contains( blurSource );
 
 		if ( stillActive ) {
 			debug( '_onBlur but component still active; not doing anything' );
 			return; // we didn't leave the component, so don't do anything
-		} else {
-			debug( '_onBlur before timeout setting component inactive' );
-			this.setState( {
-				isActive: false
-			} );
-			/* When the component blurs, we need to add the current text, or
-			 * the selected suggestion (if any).
-			 *
-			 * Two reasons to set a timeout rather than do this immediately:
-			 *  - Some other user action (like tapping on a suggestion) may
-			 *    have caused this blur.  If there is another user-triggered
-			 *    event, we need to give it a chance to complete first.
-			 *  - At one point, using the right arrow key to move the text
-			 *    input was causing a blur to outside the component?! (left
-			 *    arrow key does not do this).  So, we delay the resetting of
-			 *    the state and cancel it if we get focus back quick enough.
-			 */
-			debug( '_onBlur waiting to add current token' );
-			this._blurTimeoutID = window.setTimeout( function() {
-				// Add the current token, UNLESS the text input is empty and
-				// there is a suggested token selected.  In that case, we don't
-				// want to add it, because it's easy to inadvertently hover
-				// over a suggestion.
-				if ( this._isInputEmptyOrWhitespace() ) {
-					debug( '_onBlur after timeout not adding current token' );
-				} else {
-					debug( '_onBlur after timeout adding current token' );
-					this._addCurrentToken();
-				}
-				debug( '_onBlur resetting component state' );
-				this.setState( this.getInitialState() );
-				this._clearBlurTimeout();
-			}.bind( this ), 0 );
 		}
+
+		debug( '_onBlur before timeout setting component inactive' );
+		this.setState( {
+			isActive: false
+		} );
+		/* When the component blurs, we need to add the current text, or
+		 * the selected suggestion (if any).
+		 *
+		 * Two reasons to set a timeout rather than do this immediately:
+		 *  - Some other user action (like tapping on a suggestion) may
+		 *    have caused this blur.  If there is another user-triggered
+		 *    event, we need to give it a chance to complete first.
+		 *  - At one point, using the right arrow key to move the text
+		 *    input was causing a blur to outside the component?! (left
+		 *    arrow key does not do this).  So, we delay the resetting of
+		 *    the state and cancel it if we get focus back quick enough.
+		 */
+		debug( '_onBlur waiting to add current token' );
+		this._blurTimeoutID = window.setTimeout( function() {
+			// Add the current token, UNLESS the text input is empty and
+			// there is a suggested token selected.  In that case, we don't
+			// want to add it, because it's easy to inadvertently hover
+			// over a suggestion.
+			if ( this._inputHasValidValue() ) {
+				debug( '_onBlur after timeout adding current token' );
+				this._addCurrentToken();
+			} else {
+				debug( '_onBlur after timeout not adding current token' );
+			}
+			debug( '_onBlur resetting component state' );
+			this.setState( this.getInitialState() );
+			this._clearBlurTimeout();
+		}.bind( this ), 0 );
 	},
 
 	_clearBlurTimeout: function() {
@@ -176,7 +197,7 @@ var TokenField = React.createClass( {
 	},
 
 	_onClick: function( event ) {
-		var inputContainer = this.refs.tokensAndInput.getDOMNode();
+		var inputContainer = this.refs.tokensAndInput;
 		if ( event.target === inputContainer || inputContainer.contains( event.target ) ) {
 			debug( '_onClick activating component' );
 			this.setState( {
@@ -241,10 +262,21 @@ var TokenField = React.createClass( {
 			case 46: // delete (to right)
 				preventDefault = this._handleDeleteKey( this._deleteTokenAfterInput );
 				break;
-			case 188: // comma
-				if ( ! event.shiftKey ) { // ignore <
-					preventDefault = this._handleCommaKey();
-				}
+			default:
+				break;
+		}
+
+		if ( preventDefault ) {
+			event.preventDefault();
+		}
+	},
+
+	_onKeyPress: function( event ) {
+		var preventDefault = false;
+
+		switch ( event.charCode ) {
+			case 44: // comma
+				preventDefault = this._handleCommaKey();
 				break;
 			default:
 				break;
@@ -268,7 +300,7 @@ var TokenField = React.createClass( {
 
 	_getMatchingSuggestions: function() {
 		var suggestions = this.props.suggestions,
-			match = this.state.incompleteTokenValue,
+			match = this.props.saveTransform( this.state.incompleteTokenValue ),
 			startsWithMatch = [],
 			containsMatch = [];
 
@@ -300,13 +332,12 @@ var TokenField = React.createClass( {
 
 	_addCurrentToken: function() {
 		var preventDefault = false,
-			isInputEmpty = this._isInputEmptyOrWhitespace(),
 			selectedSuggestion = this._getSelectedSuggestion();
 
 		if ( selectedSuggestion ) {
 			this._addNewToken( selectedSuggestion );
 			preventDefault = true;
-		} else if ( ! isInputEmpty ) {
+		} else if ( this._inputHasValidValue() ) {
 			this._addNewToken( this.state.incompleteTokenValue );
 			preventDefault = true;
 		}
@@ -360,9 +391,8 @@ var TokenField = React.createClass( {
 	_handleCommaKey: function() {
 		var preventDefault = true;
 
-		if ( ! this._isInputEmpty() ) {
+		if ( this._inputHasValidValue() ) {
 			this._addNewToken( this.state.incompleteTokenValue );
-			preventDefault = true;
 		}
 
 		return preventDefault;
@@ -372,8 +402,8 @@ var TokenField = React.createClass( {
 		return this.state.incompleteTokenValue.length === 0;
 	},
 
-	_isInputEmptyOrWhitespace: function() {
-		return /^\s*$/.test( this.state.incompleteTokenValue );
+	_inputHasValidValue: function() {
+		return this.props.saveTransform( this.state.incompleteTokenValue ).length > 0;
 	},
 
 	_deleteTokenBeforeInput: function() {
@@ -418,6 +448,8 @@ var TokenField = React.createClass( {
 
 	_addNewToken: function( token ) {
 		var newValue;
+
+		token = this.props.saveTransform( token );
 
 		if ( ! contains( this.props.value, token ) ) {
 			newValue = clone( this.props.value );

@@ -34,7 +34,9 @@
 	}
 
 	textarea {
+		max-height: 400px;
 		min-height: 33px;
+		height: 33px;
 		padding-right: 60px;
 		resize: vertical;
 		font-family: $serif;
@@ -44,7 +46,7 @@
 		opacity: 0;
 		position: absolute;
 		top: 4px;
-		right: 12px;
+		right: 16px;
 		padding: 4px;
 		font-size: 12px;
 		font-weight: 600;
@@ -139,6 +141,7 @@
 }
 
 .comment__author {
+	font-weight: bold;
 	color: darken( $gray, 30 );
 
 	.gravatar {
@@ -147,6 +150,18 @@
 			left: -41px;
 		border-radius: 48px;
 	}
+
+	.gridicon {
+		height: 16px;
+		fill: lighten( $gray, 10 );
+		margin-left: 2px;
+		position: relative;
+			top: 2px;
+	}
+
+	&:hover .gridicon {
+		fill: $link-highlight;
+	}
 }
 
 .comment__username {
@@ -154,10 +169,15 @@
 }
 
 .comment__timestamp a {
+	font-weight: normal;
 	font-size: 13px;
 	color: lighten( $gray, 10 );
 	margin-left: 8px;
 	text-decoration: none;
+
+	&:hover {
+		color: $link-highlight;
+	}
 }
 
 .comment__moderation {
@@ -207,34 +227,34 @@
 		cursor: pointer;
 		font-size: 14px;
 
-		.gridicon__wrapper {
+		.like-icons {
 			margin-right: 18px;
 		}
 
-		.gridicon {
-			top: 4px;
+		&.comment__actions-reply {
+			.gridicon {
+				position: relative;
+					top: 4px;
+				margin-right: 4px;
+				transform: rotate(180deg);
+			}
 		}
 
-		.gridicon__like-empty {
-			fill: $gray;
+		&.like-button {
+			.gridicon {
+				top: 4px;
+			}
 		}
 
 		&:hover {
 			color: $blue-medium;
-
-			.gridicon__like-empty {
-				fill: $blue-medium;
-			}
 		}
 	}
-}
 
-.comment__actions-reply {
-	&:before {
-		@include noticon( '\f412', 16px );
-		margin-right: 4px;
-		position: relative;
-		top: 2px;
+	@include breakpoint( "<480px" ) {
+		.like-button .like-button__label-status {
+			display: inline;
+		}
 	}
 }
 

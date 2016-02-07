@@ -1,6 +1,11 @@
 .domain-main-placeholder {
-	.header-cake__title {
+	.domain-management-header__children {
 		@include placeholder(23%);
+
+		@include breakpoint('>480px') {
+			max-width: 60%;
+			margin: 0 auto;
+		}
 	}
 }
 
@@ -47,38 +52,14 @@
 
 .domain-management-header__children {
 	white-space: nowrap;
-}
-
-.domain-management-list-item.card {
-	padding: 0;
-	@include clear-fix;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .domain-management-list-item__link {
 	cursor: pointer;
 	display: block;
-	padding: 16px;
 	overflow: hidden;
-
-	@include breakpoint( ">660px" ) {
-		padding: 24px;
-	}
-
-	&:after {
-		@include noticon( '\f431', 25px );
-		color: $gray;
-		display: block;
-		height: auto;
-		line-height: 72px;
-		position: absolute;
-			right: 16px;
-			top: 0;
-		transform: rotate( -90deg );
-
-		@include breakpoint( ">660px" ) {
-			line-height: 103px;
-		}
-	}
 }
 
 .domain-management-list-item__title {
@@ -92,7 +73,7 @@
 	max-width: 70%;
 
 	@include breakpoint( ">480px" ) {
-		font-size: 24px;
+		font-size: 18px;
 		font-weight: 700;
 		font-family: $serif;
 		max-width: none;
@@ -111,9 +92,8 @@
 		text-transform: uppercase;
 	}
 
-	.flag {
-		cursor: pointer;
-		margin: 0 0 0 5px;
+	.notice {
+		margin: 0 0 0 8px;
 	}
 }
 
@@ -625,9 +605,9 @@ ul.email-forwarding__list {
 			}
 		}
 
-		.button-remove {
+		.button {
 			float: right;
-			margin-top: -2px;
+			margin-top: -3px;
 		}
 	}
 }
@@ -847,28 +827,25 @@ ul.email-forwarding__list {
 .name-servers {
 	.custom-nameservers-row {
 		margin-top: 10px;
-	}
+		position: relative;
 
-	.remove,
-	.add {
-		border-radius: 2px;
-		color: #FFF;
-		cursor: pointer;
-		display: inline-block;
-		font-size: 9px;
-		padding: 3px 8px;
-		position: absolute;
-		margin-top: 11px;
-		margin-right: 34px;
-		text-transform: uppercase;
-		right: 0px;
-	}
+		input[type=text] {
+			padding-right: 38px;
 
-	.add {
-		background: $alert-green;
-	}
-	.remove {
-		background: $alert-red;
+			@include breakpoint( '<480px' ) {
+				padding-right: 35px;
+			}
+		}
+
+		.button {
+			position: absolute;
+			right: 7px;
+			top: 8px;
+
+			@include breakpoint( '<480px' ) {
+				right: 4px;
+			}
+		}
 	}
 
 	.notice {
@@ -901,6 +878,8 @@ ul.dns__list {
 
 	li {
 		border-top: 1px solid $gray-light;
+		display: flex;
+		justify-content: space-between;
 		overflow: auto;
 		padding: 10px 0;
 		position: relative;
@@ -915,12 +894,11 @@ ul.dns__list {
 			background: #87a6bc;
 			border-radius: 2px;
 			color: $white;
-			float: left;
+			display: block;
 			font-size: 12px;
 			margin: 0 10px 0 0;
 			padding: 10px 5px;
 			text-align: center;
-			width: 60px;
 		}
 
 		strong {
@@ -928,16 +906,19 @@ ul.dns__list {
 			font-weight: normal;
 		}
 	}
-	.remove {
-		background-color: #87a6bc;
-		border-radius: 2px;
-		color: #FFF;
-		cursor: pointer;
-		display: inline-block;
-		float: right;
-		font-size: 9px;
-		padding: 3px 8px;
-		text-transform: uppercase;
+
+	.dns__list-type {
+		min-width: 60px;
+	}
+
+	.dns__list-info {
+		width: 100%;
+		word-break: break-all;
+	}
+
+	.dns__list-remove {
+		text-align: right;
+		width: 100px;
 	}
 }
 

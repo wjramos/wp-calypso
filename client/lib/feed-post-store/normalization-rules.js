@@ -1,22 +1,29 @@
 /**
  * External Dependecies
  */
-var find = require( 'lodash/collection/find' );
+const find = require( 'lodash/collection/find' ),
+	forEach = require( 'lodash/collection/forEach' ),
+	url = require( 'url' ),
+	matches = require( 'lodash/utility/matches' ),
+	toArray = require( 'lodash/lang/toArray' );
 
 /**
  * Internal Dependencies
  */
-var postNormalizer = require( 'lib/post-normalizer' ),
+const postNormalizer = require( 'lib/post-normalizer' ),
+	resizeImageUrl = require( 'lib/resize-image-url' ),
 	DISPLAY_TYPES = require( './display-types' );
 
 /**
  * Module vars
  */
 const READER_CONTENT_WIDTH = 720,
+	DISCOVER_FULL_BLEED_WIDTH = 1082,
 	PHOTO_ONLY_MIN_WIDTH = READER_CONTENT_WIDTH * 0.8,
-	ONE_LINER_THRESHOLD = ( 20 * 10 ); // roughly 10 lines of words
+	ONE_LINER_THRESHOLD = ( 20 * 10 ), // roughly 10 lines of words
+	DISCOVER_BLOG_ID = 53424024;
 
-var fastPostNormalizationRules = [
+const fastPostNormalizationRules = [
 		postNormalizer.decodeEntities,
 		postNormalizer.stripHTML,
 		postNormalizer.preventWidows,
@@ -27,8 +34,10 @@ var fastPostNormalizationRules = [
 		postNormalizer.withContentDOM( [
 			postNormalizer.content.removeStyles,
 			postNormalizer.content.safeContentImages( READER_CONTENT_WIDTH ),
+			discoverFullBleedImages,
 			postNormalizer.content.makeEmbedsSecure,
 			postNormalizer.content.disableAutoPlayOnEmbeds,
+			postNormalizer.content.disableAutoPlayOnMedia,
 			postNormalizer.content.detectEmbeds,
 			postNormalizer.content.wordCountAndReadingTime
 		] ),
@@ -40,6 +49,19 @@ var fastPostNormalizationRules = [
 		postNormalizer.pickCanonicalImage,
 		classifyPost
 	];
+
+function discoverFullBleedImages( post, callback ) {
+	if ( post.site_ID === DISCOVER_BLOG_ID ) {
+		const images = toArray( post.__contentDOM.querySelectorAll( '.fullbleed img, img.fullbleed' ) );
+		forEach( images, function( image ) {
+			const newSrc = resizeImageUrl( image.src, { w: DISCOVER_FULL_BLEED_WIDTH } );
+			let oldImageObject = find( post.content_images, { src: image.src } );
+			oldImageObject.src = newSrc;
+			image.src = newSrc;
+		} );
+	}
+	callback();
+}
 
 /**
  * Attempt to classify the post into a display type
@@ -72,7 +94,17 @@ function classifyPost( post, callback ) {
 			}
 		}
 
-		if ( find( post.content_images, { src: canonicalImage.uri } ) ) {
+		const canonicalImageUrl = url.parse( canonicalImage.uri, true, true ),
+			canonicalImageUrlImportantParts = {
+				hostname: canonicalImageUrl.hostname,
+				pathname: canonicalImageUrl.pathname,
+				query: canonicalImageUrl.query
+			},
+			matcher = matches( canonicalImageUrlImportantParts );
+		if ( find( post.content_images, ( img ) => {
+			const imgUrl = url.parse( img.src, true, true );
+			return matcher( imgUrl );
+		} ) ) {
 			displayType ^= DISPLAY_TYPES.CANONICAL_IN_CONTENT;
 		}
 	}

@@ -1,7 +1,9 @@
 /**
  * External dependencies
  */
-var React = require( 'react/addons' ),
+var ReactDom = require( 'react-dom' ),
+	React = require( 'react' ),
+	classnames = require( 'classnames' ),
 	noop = require( 'lodash/utility/noop' ),
 	times = require( 'lodash/utility/times' );
 
@@ -56,14 +58,16 @@ module.exports = React.createClass( {
 		suppressSiteNameLink: React.PropTypes.bool,
 		showFollowInHeader: React.PropTypes.bool,
 		onUpdatesShown: React.PropTypes.func,
-		emptyContent: React.PropTypes.object
+		emptyContent: React.PropTypes.object,
+		className: React.PropTypes.string
 	},
 
 	getDefaultProps: function() {
 		return {
 			suppressSiteNameLink: false,
 			showFollowInHeader: false,
-			onShowUpdates: noop
+			onShowUpdates: noop,
+			className: ''
 		};
 	},
 
@@ -106,7 +110,7 @@ module.exports = React.createClass( {
 			documentElement,
 			windowTop,
 			scrollY;
-		selectedNode = React.findDOMNode( this ).querySelector( '.is-selected' );
+		selectedNode = ReactDom.findDOMNode( this ).querySelector( '.is-selected' );
 		if ( selectedNode ) {
 			documentElement = document.documentElement;
 			selectedNode.focus();
@@ -322,11 +326,16 @@ module.exports = React.createClass( {
 	},
 
 	showFullPost: function( post, options ) {
+		options = options || {};
+		var hashtag = '';
+		if ( options[ 'comments' ] ) {
+			hashtag += '#comments';
+		}
 		var method = options && options.replaceHistory ? 'replace' : 'show';
 		if ( post.feed_ID && post.feed_item_ID ) {
-			page[ method ]( '/read/post/feed/' + post.feed_ID + '/' + post.feed_item_ID );
+			page[ method ]( '/read/post/feed/' + post.feed_ID + '/' + post.feed_item_ID + hashtag );
 		} else {
-			page[ method ]( '/read/post/id/' + post.site_ID + '/' + post.ID );
+			page[ method ]( '/read/post/id/' + post.site_ID + '/' + post.ID + hashtag );
 		}
 	},
 
@@ -402,11 +411,13 @@ module.exports = React.createClass( {
 	render: function() {
 		var store = this.props.store,
 			hasNoPosts = store.isLastPage() && ( ( ! this.state.posts ) || this.state.posts.length === 0 ),
-			body;
+			header, body;
 
-		if ( hasNoPosts ) {
+		if ( hasNoPosts || store.hasRecentError( 'invalid_tag' ) ) {
+			header = null;
 			body = this.props.emptyContent || ( <EmptyContent /> );
 		} else {
+			header = this.props.children;
 			body = ( <InfiniteList
 			ref={ ( c ) => this._list = c }
 			className="reader__content"
@@ -422,14 +433,14 @@ module.exports = React.createClass( {
 		}
 
 		return (
-			<Main className="following">
+			<Main className={ classnames( 'following', this.props.className ) }>
 				<MobileBackToSidebar>
 					<h1>{ this.props.listName }</h1>
 				</MobileBackToSidebar>
 
 				<UpdateNotice count={ this.state.updateCount } onClick={ this.handleUpdateClick } />
 
-				{ this.props.children }
+				{ header }
 
 				{ body }
 

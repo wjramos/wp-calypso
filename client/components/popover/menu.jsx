@@ -1,7 +1,8 @@
 /**
 * External dependencies
 */
-var React = require( 'react' );
+var ReactDom = require( 'react-dom' ),
+	React = require( 'react' );
 
 /**
 * Internal dependencies
@@ -57,13 +58,13 @@ var PopoverMenu = React.createClass( {
 			onClick = child.props.onClick.bind( null, boundOnClose );
 		}
 
-		return React.addons.cloneWithProps( child, {
+		return React.cloneElement( child, {
 			onClick: onClick
 		} );
 	},
 
 	_onShow: function() {
-		var elementToFocus = React.findDOMNode( this.refs.menu );
+		var elementToFocus = ReactDom.findDOMNode( this.refs.menu );
 
 		this._previouslyFocusedElement = document.activeElement;
 
@@ -83,7 +84,7 @@ var PopoverMenu = React.createClass( {
 	 * bottom.
 	 */
 	_getClosestSibling: function( target, isDownwardMotion = true ) {
-		const menu = React.findDOMNode( this.refs.menu );
+		const menu = ReactDom.findDOMNode( this.refs.menu );
 
 		let first = menu.firstChild,
 			last = menu.lastChild;

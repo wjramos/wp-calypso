@@ -1,8 +1,8 @@
 /**
  * External dependencies
  */
-var React = require( 'react/addons' ),
-	ReactCSSTransitionGroup = React.addons.CSSTransitionGroup,
+var React = require( 'react' ),
+	ReactCSSTransitionGroup = require( 'react-addons-css-transition-group' ),
 	page = require( 'page' );
 
 /**
@@ -195,14 +195,14 @@ module.exports = React.createClass( {
 			return (
 				<PopoverMenuItem className="page__trash-item" onClick={ this.updateStatusTrash }>
 					<Gridicon icon="trash" size={ 18 } />
-					{ this.translate( 'Send to Trash' ) }
+					{ this.translate( 'Trash' ) }
 				</PopoverMenuItem>
 			);
 		} else {
 			return (
-				<PopoverMenuItem className="page__trash-item" onClick={ this.updateStatusDelete }>
+				<PopoverMenuItem className="page__delete-item" onClick={ this.updateStatusDelete }>
 					<Gridicon icon="trash" size={ 18 } />
-					{ this.translate( 'Delete permanently' ) }
+					{ this.translate( 'Delete' ) }
 				</PopoverMenuItem>
 			);
 		}
@@ -301,7 +301,10 @@ module.exports = React.createClass( {
 					{ this.getSendToTrashItem() }
 					{ this.popoverMoreInfo() }
 				</PopoverMenu>
-				<ReactCSSTransitionGroup transitionName="updated-trans">
+				<ReactCSSTransitionGroup
+					transitionName="updated-trans"
+					transitionEnterTimeout={ 300 }
+					transitionLeaveTimeout={ 300 }>
 					{ this.buildUpdateTemplate() }
 				</ReactCSSTransitionGroup>
 			</CompactCard>

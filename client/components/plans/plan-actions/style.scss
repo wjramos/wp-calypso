@@ -34,11 +34,6 @@
 	opacity: .8;
 }
 
-.plan-actions__plan-expiration,
-.plan-actions__trial-period {
-	height: 40px;
-}
-
 .plan-actions.is-placeholder {
 	.plan-actions__upgrade-button {
 		@include placeholder( 23% );
@@ -170,4 +165,8 @@
 .business-bundle.plan-actions__illustration,
 .jetpack_business.plan-actions__illustration {
 	background-image: url('/calypso/images/plans/plan-business.svg');
+}
+
+.jetpack_premium .is-image-button, .jetpack_business .is-image-button {
+	display: none;
 }

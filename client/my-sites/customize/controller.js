@@ -1,8 +1,9 @@
 /**
  * External Dependencies
  */
-var React = require( 'react' ),
-	Qs = require( 'qs' );
+var ReactDom = require( 'react-dom' ),
+	React = require( 'react' ),
+	ReduxProvider = require( 'react-redux' ).Provider;
 
 /**
  * Internal Dependencies
@@ -24,13 +25,15 @@ module.exports = {
 
 		titleActions.setTitle( i18n.translate( 'Customizer', { textOnly: true } ), { siteID: siteID } );
 
-		React.render(
-			React.createElement( CustomizeComponent, {
-				domain: context.params.domain || '',
-				sites: sites,
-				prevPath: context.prevPath || '',
-				query: Qs.parse( context.querystring )
-			} ),
+		ReactDom.render(
+			React.createElement( ReduxProvider, { store: context.store },
+				React.createElement( CustomizeComponent, {
+					domain: context.params.domain || '',
+					sites: sites,
+					prevPath: context.prevPath || '',
+					query: context.query
+				} )
+			),
 			document.getElementById( 'primary' )
 		);
 	}

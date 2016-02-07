@@ -1,20 +1,25 @@
 /**
  * External dependencies
  */
-var React = require( 'react/addons' ),
+var React = require( 'react' ),
+	connect = require( 'react-redux' ).connect,
 	store = require( 'store' );
 
 /**
  * Internal dependencies
  */
-var config = require( 'config' ),
+var Button = require( 'components/button' ),
+	config = require( 'config' ),
+	Dispatcher = require( 'dispatcher' ),
 	cartItems = require( 'lib/cart-values' ).cartItems,
 	Card = require( 'components/card' ),
 	Main = require( 'components/main' ),
 	analytics = require( 'analytics' ),
 	isPlan = require( 'lib/products-values' ).isPlan,
 	{ getPrimaryDomain, isSubdomain } = require( 'lib/domains' ),
+	refreshSitePlans = require( 'state/sites/plans/actions' ).refreshSitePlans,
 	i18n = require( 'lib/mixins/i18n' ),
+	PurchaseDetail = require( './purchase-detail' ),
 	paths = require( 'my-sites/upgrades/paths' );
 
 /**
@@ -29,8 +34,6 @@ var BusinessPlanDetails,
 	JetpackBusinessPlanDetails,
 	JetpackPremiumPlanDetails,
 	PremiumPlanDetails,
-	PurchaseDetail,
-	PurchaseDetailButton,
 	SiteRedirectDetails;
 
 var CheckoutThankYou = React.createClass( {
@@ -63,6 +66,24 @@ var CheckoutThankYou = React.createClass( {
 	},
 
 	componentDidMount: function() {
+		var lastTransaction = this.props.lastTransaction,
+			selectedSite;
+
+		if ( lastTransaction ) {
+			selectedSite = lastTransaction.selectedSite;
+
+			// Refresh selected site plans if the user just purchased a plan
+			if ( cartItems.hasPlan( lastTransaction.cart ) ) {
+				this.props.refreshSitePlans( selectedSite.ID );
+			}
+
+			// Refresh the list of sites to update the `site.plan` property
+			// needed to display the plan name on the right of the `Plans` menu item
+			Dispatcher.handleViewAction( {
+				type: 'FETCH_SITES'
+			} );
+		}
+
 		analytics.tracks.recordEvent( 'calypso_checkout_thank_you_view' );
 	},
 
@@ -237,25 +258,34 @@ var CheckoutThankYou = React.createClass( {
 		if ( this.cartHasJetpackPlan() ) {
 			return (
 				<p>
-					{ this.translate( 'Check out our {{supportDocsLink}}support docs{{/supportDocsLink}} or {{emailLink}}send an email{{/emailLink}} to our Happiness Engineers.', {
-						components: {
-							supportDocsLink: <a href={ 'http://jetpack.me/support/' } target="_blank" />,
-							emailLink: <a href="http://jetpack.me/contact-support/" target="_blank" />
+					{ this.translate(
+						'Check out our {{supportDocsLink}}support docs{{/supportDocsLink}} ' +
+						'or {{contactLink}}contact us{{/contactLink}}.',
+						{
+							components: {
+								supportDocsLink: <a href={ 'http://jetpack.me/support/' } target="_blank" />,
+								contactLink: <a href={ 'http://jetpack.me/contact-support/' } target="_blank" />
+							}
 						}
-					} ) }
+					) }
 				</p>
 			);
 		}
 
 		return (
 			<p>
-				{ this.translate( 'Check out our {{supportDocsLink}}support docs{{/supportDocsLink}}, search for tips and tricks in {{forumLink}}the forum{{/forumLink}}, or {{emailLink}}send an email{{/emailLink}} to our Happiness Engineers.', {
-					components: {
-						supportDocsLink: <a href={ 'http://' + localeSlug + '.support.wordpress.com' } target="_blank" />,
-						forumLink: <a href={ 'http://' + localeSlug + '.forums.wordpress.com' } target="_blank" />,
-						emailLink: <a href="http://support.wordpress.com/contact/" target="_blank" />
+				{ this.translate(
+					'Check out our {{supportDocsLink}}support docs{{/supportDocsLink}}, ' +
+					'search for tips and tricks in {{forumLink}}the forum{{/forumLink}}, ' +
+					'or {{contactLink}}contact us{{/contactLink}}.',
+					{
+						components: {
+							supportDocsLink: <a href={ 'http://' + localeSlug + '.support.wordpress.com' } target="_blank" />,
+							forumLink: <a href={ 'http://' + localeSlug + '.forums.wordpress.com' } target="_blank" />,
+							contactLink: <a href={ '/help/contact' } />
+						}
 					}
-				} ) }
+				) }
 			</p>
 		);
 	}
@@ -349,7 +379,7 @@ BusinessPlanDetails = React.createClass( {
 					title={ this.translate( 'Add eCommerce' ) }
 					description={ this.translate( 'Connect your Ecwid or Shopify store with your WordPress.com site.' ) }
 					buttonText={ this.translate( 'Set Up eCommerce' ) }
-					onButtonClick={ goToExternalPage( this.props.selectedSite.URL + '/wp-admin/admin.php?page=business-plugins' ) } />
+					onButtonClick={ goToExternalPage( '/plugins/' + this.props.selectedSite.slug ) } />
 
 				{ ! showGetFreeDomainTip
 				? <PurchaseDetail
@@ -565,31 +595,10 @@ GenericDetails = React.createClass( {
 	render: function() {
 		return (
 			<ul className="purchase-details-list">
-				<PurchaseDetailButton text={ this.translate( 'Back to my site' ) } href={ this.props.selectedSite.URL } />
+				<Button href={ this.props.selectedSite.URL } primary>
+					{ this.translate( 'Back to my site' ) }
+				</Button>
 			</ul>
-		);
-	}
-} );
-
-PurchaseDetailButton = React.createClass( {
-	propTypes: {
-		onClick: React.PropTypes.func,
-		text: React.PropTypes.string.isRequired,
-		href: React.PropTypes.string,
-		target: React.PropTypes.string
-	},
-	render: function() {
-		if ( this.props.onClick ) {
-			return (
-				<a className="button is-primary" onClick={ this.props.onClick }>
-					{ this.props.text }
-				</a>
-			);
-		}
-		return (
-			<a className="button is-primary" href={ this.props.href } target={ this.props.target }>
-				{ this.props.text }
-			</a>
 		);
 	}
 } );
@@ -618,18 +627,13 @@ function goToDomainManagement( selectedSite, domain ) {
 	return goToExternalPage( url );
 }
 
-PurchaseDetail = React.createClass( {
-	render: function() {
-		return (
-			<li className={ 'purchase-detail ' + this.props.additionalClass }>
-				<div className="purchase-detail-text">
-					<h3>{ this.props.title }</h3>
-					<p>{ this.props.description }</p>
-				</div>
-				<PurchaseDetailButton onClick={ this.props.onButtonClick } text={ this.props.buttonText } />
-			</li>
-		);
+module.exports = connect(
+	undefined,
+	function mapDispatchToProps( dispatch ) {
+		return {
+			refreshSitePlans( siteId ) {
+				dispatch( refreshSitePlans( siteId ) );
+			}
+		};
 	}
-} );
-
-module.exports = CheckoutThankYou;
+)( CheckoutThankYou );

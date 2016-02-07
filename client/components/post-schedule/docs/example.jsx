@@ -2,6 +2,7 @@
  * External dependencies
  */
 import React from 'react';
+import PureRenderMixin from 'react-pure-render/mixin';
 
 /**
  * Internal dependencies
@@ -17,7 +18,7 @@ import Card from 'components/card';
 export default React.createClass( {
 	displayName: 'PostSchedule',
 
-	mixins: [ React.addons.PureRenderMixin ],
+	mixins: [ PureRenderMixin ],
 
 	getInitialState() {
 		var date = new Date(),
@@ -92,7 +93,7 @@ export default React.createClass( {
 		return (
 			<div className="design-assets__group">
 				<h2>
-					<a href="/devdocs/design/post-schedule">PostSchedule</a>
+					<a href="/devdocs/app-components/post-schedule">PostSchedule</a>
 				</h2>
 
 				<Card style={ {

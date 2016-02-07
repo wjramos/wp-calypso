@@ -1,7 +1,9 @@
 /**
  * External dependencies
  */
-var React = require( 'react' ),
+var ReactDom = require( 'react-dom' ),
+	ReactDomServer = require( 'react-dom/server' ),
+	React = require( 'react' ),
 	page = require( 'page' ),
 	ReduxProvider = require( 'react-redux' ).Provider,
 	startsWith = require( 'lodash/string/startsWith' ),
@@ -18,6 +20,7 @@ var actions = require( 'lib/posts/actions' ),
 	titleActions = require( 'lib/screen-title/actions' ),
 	sites = require( 'lib/sites-list' )(),
 	user = require( 'lib/user' )(),
+	setSection = require( 'state/ui/actions' ).setSection,
 	analytics = require( 'analytics' );
 
 function getPostID( context ) {
@@ -34,18 +37,18 @@ function determinePostType( context ) {
 }
 
 function renderEditor( context, postType ) {
-	context.layout.setState( { section: 'post' } );
+	context.store.dispatch( setSection( 'post' ) );
 
-	React.unmountComponentAtNode( document.getElementById( 'secondary' ) );
-	React.render(
-		React.createElement( ReduxProvider, { store: context.reduxStore }, () => {
-			return React.createElement( PreferencesData, null,
+	ReactDom.unmountComponentAtNode( document.getElementById( 'secondary' ) );
+	ReactDom.render(
+		React.createElement( ReduxProvider, { store: context.store },
+			React.createElement( PreferencesData, null,
 				React.createElement( PostEditor, {
 					sites: sites,
 					type: postType
 				} )
 			)
-		} ),
+		),
 		document.getElementById( 'primary' )
 	);
 }
@@ -82,7 +85,7 @@ function maybeRedirect( context, postType, site ) {
 }
 
 function getPressThisContent( text, url, title ) {
-	return React.renderToStaticMarkup(
+	return ReactDomServer.renderToStaticMarkup(
 		<p>
 			{ text ? <blockquote>{ text }</blockquote> : null }
 			via <a href={ url }>{ title }</a>.
@@ -123,7 +126,7 @@ module.exports = {
 			if ( postID ) {
 				actions.startEditingExisting( site, postID );
 				titleActions.setTitle( titleStrings.edit, { siteID: site.ID } );
-				analytics.ga.recordPageView( '/' + postType + '/:blogid/:postid', titleStrings.ga + ' > Edit' );
+				analytics.pageView.record( '/' + postType + '/:blogid/:postid', titleStrings.ga + ' > Edit' );
 			} else {
 				let postOptions = { type: postType };
 
@@ -139,7 +142,7 @@ module.exports = {
 
 				actions.startEditingNew( site, postOptions );
 				titleActions.setTitle( titleStrings.new, { siteID: site.ID } );
-				analytics.ga.recordPageView( '/' + postType, titleStrings.ga + ' > New' );
+				analytics.pageView.record( '/' + postType, titleStrings.ga + ' > New' );
 			}
 		}
 

@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-import React from 'react/addons';
+import React, { PropTypes } from 'react';
 import classnames from 'classnames';
 import noop from 'lodash/utility/noop';
 
@@ -12,9 +12,11 @@ import Gridicon from 'components/gridicon';
 
 export default React.createClass( {
 	displayName: 'Notice',
+	dismissTimeout: null,
 
 	getDefaultProps() {
 		return {
+			duration: 0,
 			status: 'is-info',
 			showDismiss: true,
 			className: '',
@@ -24,15 +26,28 @@ export default React.createClass( {
 
 	propTypes: {
 		// we should validate the allowed statuses
-		status: React.PropTypes.string,
-		showDismiss: React.PropTypes.bool,
-		isCompact: React.PropTypes.bool,
-		text: React.PropTypes.oneOfType( [
-			React.PropTypes.string,
-			React.PropTypes.object
+		status: PropTypes.string,
+		showDismiss: PropTypes.bool,
+		isCompact: PropTypes.bool,
+		duration: React.PropTypes.number,
+		text: PropTypes.oneOfType( [
+			PropTypes.oneOfType( [ PropTypes.string, PropTypes.node ] ),
+			PropTypes.arrayOf( PropTypes.oneOfType( [ PropTypes.string, PropTypes.node ] ) )
 		] ),
-		icon: React.PropTypes.string,
-		className: React.PropTypes.string
+		icon: PropTypes.string,
+		className: PropTypes.string
+	},
+
+	componentDidMount() {
+		if ( this.props.duration > 0 ) {
+			this.dismissTimeout = setTimeout( this.props.onDismissClick, this.props.duration );
+		}
+	},
+
+	componentWillUnmount() {
+		if ( this.dismissTimeout ) {
+			clearTimeout( this.dismissTimeout );
+		}
 	},
 
 	renderChildren() {

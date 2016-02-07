@@ -4,6 +4,8 @@
 import React from 'react';
 import classNames from 'classnames';
 import page from 'page';
+import { connect } from 'react-redux';
+import { bindActionCreators } from 'redux';
 
 /**
  * Internal dependencies
@@ -11,13 +13,13 @@ import page from 'page';
 import Card from 'components/card';
 import Gravatar from 'components/gravatar';
 import Button from 'components/button';
-import config from 'config';
 import InviteFormHeader from 'my-sites/invites/invite-form-header';
 import { acceptInvite } from 'lib/invites/actions';
+import LoggedOutFormLinks from 'components/logged-out-form/links';
+import LoggedOutFormLinkItem from 'components/logged-out-form/link-item';
+import analytics from 'analytics';
 
-export default React.createClass( {
-
-	displayName: 'InviteAcceptLoggedIn',
+let InviteAcceptLoggedIn = React.createClass( {
 
 	getInitialState() {
 		return { submitting: false }
@@ -25,43 +27,124 @@ export default React.createClass( {
 
 	accept() {
 		this.setState( { submitting: true } );
-		acceptInvite( this.props, () => page( this.props.redirectTo ) );
+		this.props.acceptInvite( this.props.invite, error => {
+			if ( ! error ) {
+				page( this.props.redirectTo );
+			} else {
+				this.setState( { submitting: false } );
+			}
+		} );
+		analytics.tracks.recordEvent( 'calypso_invite_accept_logged_in_join_button_click' );
 	},
 
-	render() {
-		const { user } = this.props,
-			signInLink = config( 'login_url' ) + '?redirect_to=' + encodeURIComponent( window.location.href );
+	decline() {
+		if ( this.props.decline && 'function' === typeof this.props.decline ) {
+			this.props.decline();
+			analytics.tracks.recordEvent( 'calypso_invite_accept_logged_in_decline_button_click' );
+		}
+	},
 
+	signInLink() {
+		analytics.tracks.recordEvent( 'calypso_invite_accept_logged_in_sign_in_link_click' );
+	},
+
+	getButtonText() {
+		let text = '';
+		if ( 'follower' === this.props.invite.role ) {
+			text = this.state.submitting
+				? this.translate( 'Following…', { context: 'button' } )
+				: this.translate( 'Follow', { context: 'button' } );
+		} else {
+			text = this.state.submitting
+				? this.translate( 'Joining…', { context: 'button' } )
+				: this.translate( 'Join', { context: 'button' } );
+		}
+
+		return text;
+	},
+
+	getJoinAsText() {
+		const { user } = this.props;
+		let text = '';
+
+		if ( 'follower' === this.props.invite.role ) {
+			text = this.translate( 'Follow as {{usernameWrap}}%(username)s{{/usernameWrap}}', {
+				components: {
+					usernameWrap: <span className="invite-accept-logged-in__join-as-username" />
+				},
+				args: {
+					username: user && user.display_name
+				}
+			} );
+		} else {
+			text = this.translate( 'Join as {{usernameWrap}}%(username)s{{/usernameWrap}}', {
+				components: {
+					usernameWrap: <span className="invite-accept-logged-in__join-as-username" />
+				},
+				args: {
+					username: user && user.display_name
+				}
+			} );
+		}
+
+		return text;
+	},
+
+	renderMatchEmailError() {
 		return (
-			<div className={ classNames( 'logged-in-accept', this.props.className ) } >
-				<Card>
-					<InviteFormHeader { ...this.props } />
-					<div className="invite-accept-logged-in__join-as">
-						<Gravatar user={ user } size={ 72 } />
+			<Card>
+				<InviteFormHeader { ... this.props.invite } user={ this.props.user } matchEmailError />
+				<div className="invite-accept-logged-in__button-bar">
+					<Button onClick={ this.signInLink } href={ this.props.signInLink }>
 						{
-							this.translate( 'Join as {{usernameWrap}}%(username)s{{/usernameWrap}}', {
-								components: {
-									usernameWrap: <span className="invite-accept-logged-in__join-as-username" />
-								},
-								args: {
-									username: user && user.display_name
-								}
-							} )
+							this.props.invite.knownUser
+							? this.translate( 'Sign In as %(email)s', { context: 'button', args: { email: this.props.invite.sentTo } } )
+							: this.translate( 'Register as %(email)s', { context: 'button', args: { email: this.props.invite.sentTo } } )
 						}
+					</Button>
+				</div>
+			</Card>
+		);
+	},
+
+	renderAccept() {
+		return (
+			<div>
+				<Card>
+					<InviteFormHeader { ... this.props.invite } user={ this.props.user } />
+					<div className="invite-accept-logged-in__join-as">
+						<Gravatar user={ this.props.user } size={ 72 } />
+						{ this.getJoinAsText() }
 					</div>
 					<div className="invite-accept-logged-in__button-bar">
-						<Button onClick={ this.props.decline } disabled={ this.state.submitting }>
-							{ this.translate( 'Decline', { context: 'button' } ) }
+						<Button onClick={ this.decline } disabled={ this.state.submitting }>
+							{ this.translate( 'Cancel', { context: 'button' } ) }
 						</Button>
 						<Button primary onClick={ this.accept } disabled={ this.state.submitting }>
-							{ this.state.submitting ? this.translate( 'Joining…', { context: 'button' } ) : this.translate( 'Join', { context: 'button' } ) }
+							{ this.getButtonText() }
 						</Button>
 					</div>
 				</Card>
-				<a className="logged-in-accept__sign-in" href={ signInLink }>
-					{ this.translate( 'Sign in as a different user' ) }
-				</a>
+
+				<LoggedOutFormLinks>
+					<LoggedOutFormLinkItem onClick={ this.signInLink } href={ this.props.signInLink }>
+						{ this.translate( 'Sign in as a different user' ) }
+					</LoggedOutFormLinkItem>
+				</LoggedOutFormLinks>
+			</div>
+		);
+	},
+
+	render() {
+		return (
+			<div className={ classNames( 'invite-accept-logged-in', this.props.className ) }>
+				{ this.props.forceMatchingEmail ? this.renderMatchEmailError() : this.renderAccept() }
 			</div>
 		);
 	}
 } );
+
+export default connect(
+	null,
+	dispatch => bindActionCreators( { acceptInvite }, dispatch )
+)( InviteAcceptLoggedIn );

@@ -1,9 +1,17 @@
-import React, { PropTypes } from 'react/addons';
+/**
+ * External dependencies
+ */
+import React, { PropTypes } from 'react';
+import PureRenderMixin from 'react-pure-render/mixin';
+
+/**
+ * Internal dependencies
+ */
 import CommentConstants from 'lib/comment-store/constants';
 
 const PostCommentContent = React.createClass( {
 
-	mixins: [ React.addons.PureRenderMixin ],
+	mixins: [ PureRenderMixin ],
 
 	propTypes: {
 		content: PropTypes.string.isRequired,
@@ -16,10 +24,12 @@ const PostCommentContent = React.createClass( {
 			return <div className="comment__content">{ this.props.content }</div>;
 		}
 
+		/*eslint-disable react/no-danger*/
 		return (
 			<div className="comment__content" dangerouslySetInnerHTML={{ __html: this.props.content }}>
 			</div>
 		);
+		/*eslint-enable react/no-danger*/
 	}
 } );
 

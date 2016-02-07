@@ -318,7 +318,7 @@ ul.module-content-list-item-actions {
 
 		background: $gray-light;
 		display: none;
-		z-index: 3;
+		z-index: z-index( 'root', 'ul.module-content-list-item-actions.collapsed' );
 		margin: 0;
 		top: 30px;
 		right: auto;
@@ -355,7 +355,7 @@ ul.module-content-list-item-actions {
 
 		background: $gray-light;
 		display: none;
-		z-index: 2;
+		z-index: z-index( 'root', 'ul.module-content-list-item-actions' );
 		margin: 0;
 		top: 46px;
 		right: auto;
@@ -433,7 +433,7 @@ ul.module-content-list-item-action-submenu {
 		@include dropdown-menu;
 
 		display: none;
-		z-index: 2;
+		z-index: z-index( 'root', 'ul.module-content-list-item-action-submenu' );
 		margin: 0;
 		top: 32px;
 		right: -20px;
@@ -761,9 +761,9 @@ ul.module-content-list-legend {
 	> .module-content-list-item-wrapper .module-content-list-item-right,
 	> .module-content-list-item-wrapper {
 		background: $gray-light; // Default non-active color
- 	}
+	}
 
- 	.module-content-list-item-right::before {
+	.module-content-list-item-right::before {
 		background-image: linear-gradient(to right, $transparent 0%, $gray-light 90%);
 	}
 

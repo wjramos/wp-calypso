@@ -12,14 +12,16 @@ import observe from 'lib/mixins/data-observe';
 import PurchasesStore from 'lib/purchases/store';
 import StoreConnection from 'components/data/store-connection';
 import StoredCardsStore from 'lib/purchases/stored-cards/store';
+import userFactory from 'lib/user';
 
 /**
  * Module variables
  */
 const stores = [
-	PurchasesStore,
-	StoredCardsStore
-];
+		PurchasesStore,
+		StoredCardsStore
+	],
+	user = userFactory();
 
 function getStateFromStores( props ) {
 	return {
@@ -32,7 +34,7 @@ function getStateFromStores( props ) {
 
 function isDataLoading( state ) {
 	return (
-		! state.card ||
+		state.card.isFetching ||
 		! state.selectedPurchase.hasLoadedFromServer ||
 		! state.selectedSite
 	);
@@ -40,7 +42,7 @@ function isDataLoading( state ) {
 
 const EditCardDetailsData = React.createClass( {
 	propTypes: {
-		cardId: React.PropTypes.string.isRequired,
+		cardId: React.PropTypes.string,
 		component: React.PropTypes.func.isRequired,
 		purchaseId: React.PropTypes.string.isRequired,
 		loadingPlaceholder: React.PropTypes.func.isRequired,
@@ -51,7 +53,7 @@ const EditCardDetailsData = React.createClass( {
 
 	componentWillMount() {
 		fetchStoredCards();
-		fetchUserPurchases();
+		fetchUserPurchases( user.get().ID );
 	},
 
 	render() {

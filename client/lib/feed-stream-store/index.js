@@ -70,7 +70,8 @@ function getStoreForTag( storeId ) {
 		fetcher: fetcher,
 		keyMaker: siteKeyMaker,
 		onGapFetch: limitSiteParams,
-		onUpdateFetch: limitSiteParams
+		onUpdateFetch: limitSiteParams,
+		dateProperty: 'tagged_on'
 	} );
 }
 
@@ -111,7 +112,7 @@ function getStoreForSite( storeId ) {
 function getStoreForFeatured( storeId ) {
 	var siteId = storeId.split( ':' )[ 1 ],
 		fetcher = function( query, callback ) {
-			wpcomUndoc.readSiteFeatured( siteId, callback );
+			wpcomUndoc.readSiteFeatured( siteId, query, callback );
 		};
 
 	return new FeedStream( {

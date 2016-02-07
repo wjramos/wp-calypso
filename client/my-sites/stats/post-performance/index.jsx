@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-var React = require( 'react/addons' ),
+var React = require( 'react' ),
 	debug = require( 'debug' )( 'calypso:stats:postPerformance' ),
 	classNames = require( 'classnames' );
 
@@ -9,8 +9,9 @@ var React = require( 'react/addons' ),
  * Internal dependencies
  */
 var Card = require( 'components/card' ),
-	PostListStore = require( 'lib/posts/post-list-store' ),
+	PostListStore = require( 'lib/posts/post-list-store-factory' )(),
 	PostStatsStore = require( 'lib/post-stats/store' ),
+	StatsTabs = require( '../stats-tabs' ),
 	Emojify = require( 'components/emojify' ),
 	actions = require( 'lib/posts/actions' ),
 	Gridicon = require( 'components/gridicon' );
@@ -108,15 +109,28 @@ module.exports = React.createClass( {
 				comments: post ? post.discussion.comment_count : emptyString
 			},
 			tabs = [
-				{ label: this.translate( 'Views' ), labelIcon: 'visible', value: values.views, link: summaryUrl },
-				{ label: this.translate( 'Likes' ), labelIcon: 'star', value: values.likes },
-				{ label: this.translate( 'Comments' ), labelIcon: 'comment', value: values.comments }
+				{
+					label: this.translate( 'Views' ),
+					labelIcon: 'visible',
+					value: this.numberFormat( values.views ),
+					link: summaryUrl
+				},
+				{
+					label: this.translate( 'Likes' ),
+					labelIcon: 'star',
+					value: this.numberFormat( values.likes )
+				},
+				{
+					label: this.translate( 'Comments' ),
+					labelIcon: 'comment',
+					value: this.numberFormat( values.comments )
+				}
 			];
 
 		return tabs.map( function( tabOptions, index ) {
 			var valueClass = classNames( 'value', { 'is-low': tabOptions.value === 0 } ),
 				wrapperClass = classNames( {
-					'module-tab': true,
+					'stats-tab': true,
 					'is-post-summary': true,
 					'is-loading': isLoading
 				} ),
@@ -179,8 +193,8 @@ module.exports = React.createClass( {
 					</h3>
 				</div>
 				<div className="module-content-text">
-					{ post ?
-						(
+					{ post
+						? (
 							<p>
 								{ this.translate(
 									'It\'s been %(timeLapsed)s since {{href}}{{postTitle/}}{{/href}} was published. Here\'s how the post has performed so far\u2026',
@@ -199,9 +213,9 @@ module.exports = React.createClass( {
 						) : null
 					}
 				</div>
-				<ul className="module-tabs">
+				<StatsTabs>
 					{ this.buildTabs( summaryUrl ) }
-				</ul>
+				</StatsTabs>
 			</Card>
 		);
 	}

@@ -1,26 +1,49 @@
 /**
  * External dependencies
  */
-var React = require( 'react/addons' );
+var connect = require( 'react-redux' ).connect,
+	find = require( 'lodash/collection/find' ),
+	page = require( 'page' ),
+	React = require( 'react' );
 
 /**
  * Internal dependencies
  */
 var analytics = require( 'analytics' ),
+	fetchSitePlans = require( 'state/sites/plans/actions' ).fetchSitePlans,
+	getABTestVariation = require( 'lib/abtest' ).getABTestVariation,
+	getCurrentPlan = require( 'lib/plans' ).getCurrentPlan,
+	shouldFetchSitePlans = require( 'lib/plans' ).shouldFetchSitePlans,
+	getPlansBySite = require( 'state/sites/plans/selectors' ).getPlansBySite,
+	Gridicon = require( 'components/gridicon' ),
+	isBusiness = require( 'lib/products-values' ).isBusiness,
+	isJpphpBundle = require( 'lib/products-values' ).isJpphpBundle,
+	isPremium = require( 'lib/products-values' ).isPremium,
+	Main = require( 'components/main' ),
+	Notice = require( 'components/notice' ),
 	observe = require( 'lib/mixins/data-observe' ),
+	paths = require( './paths' ),
 	PlanList = require( 'components/plans/plan-list' ),
-	siteSpecificPlansDetailsMixin = require( 'components/plans/site-specific-plan-details-mixin' ),
+	PlanOverview = require( './plan-overview' ),
+	preventWidows = require( 'lib/formatting' ).preventWidows,
 	SidebarNavigation = require( 'my-sites/sidebar-navigation' ),
-	UpgradesNavigation = require( 'my-sites/upgrades/navigation' ),
-	Gridicon = require( 'components/gridicon' );
+	UpgradesNavigation = require( 'my-sites/upgrades/navigation' );
 
-module.exports = React.createClass( {
+var Plans = React.createClass( {
 	displayName: 'Plans',
 
-	mixins: [ siteSpecificPlansDetailsMixin, observe( 'sites', 'plans', 'siteSpecificPlansDetailsList' ) ],
+	mixins: [ observe( 'sites', 'plans' ) ],
 
 	getInitialState: function() {
 		return { openPlan: '' };
+	},
+
+	componentDidMount: function() {
+		this.props.fetchSitePlans( this.props.sitePlans, this.props.sites.getSelectedSite() );
+	},
+
+	componentWillReceiveProps: function() {
+		this.props.fetchSitePlans( this.props.sitePlans, this.props.sites.getSelectedSite() );
 	},
 
 	openPlan: function( planId ) {
@@ -35,6 +58,12 @@ module.exports = React.createClass( {
 		var url = '/plans/compare',
 			selectedSite = this.props.sites.getSelectedSite();
 
+		var compareString = this.translate( 'Compare Plans' );
+
+		if ( selectedSite.jetpack ) {
+			compareString = this.translate( 'Compare Options' );
+		}
+
 		if ( this.props.plans.get().length <= 0 ) {
 			return '';
 		}
@@ -45,45 +74,129 @@ module.exports = React.createClass( {
 
 		return (
 			<a href={ url } className="compare-plans-link" onClick={ this.recordComparePlansClick }>
-				<Gridicon icon="clipboard" size="18" />
-				{ this.translate( 'Compare Plans' ) }
+				<Gridicon icon="clipboard" size={ 18 } />
+				{ compareString }
 			</a>
 		);
 	},
 
-	sidebarNavigation: function() {
-		return <SidebarNavigation />;
+	redirectToDefault() {
+		page.redirect( paths.plans( this.props.getSelectedSite().slug ) );
 	},
 
-	render: function() {
-		var classNames = 'main main-column ',
-			hasJpphpBundle = this.props.siteSpecificPlansDetailsList &&
-				this.props.siteSpecificPlansDetailsList.hasJpphpBundle( this.props.sites.getSelectedSite().domain );
+	renderNotice() {
+		if ( 'free-trial-canceled' === this.props.destinationType ) {
+			return (
+				<Notice onDismissClick={ this.redirectToDefault } status="is-success">
+					{ this.translate( 'Your trial has been removed. Thanks for giving it a try!' ) }
+				</Notice>
+			);
+		}
+	},
+
+	renderTrialCopy: function() {
+		var message,
+			businessPlan,
+			premiumPlan;
+
+		if ( ! this.props.sitePlans.hasLoadedFromServer || getABTestVariation( 'freeTrials' ) !== 'offered' ) {
+			return null;
+		}
+
+		businessPlan = find( this.props.sitePlans.data, isBusiness );
+		premiumPlan = find( this.props.sitePlans.data, isPremium );
+
+		if ( businessPlan.canStartTrial && premiumPlan.canStartTrial ) {
+			message = this.translate( 'Try WordPress.com Premium or Business free for 14 days, no credit card required' );
+		}
+
+		if ( businessPlan.canStartTrial && ! premiumPlan.canStartTrial ) {
+			message = this.translate( 'Try WordPress.com Business free for 14 days, no credit card required' );
+		}
+
+		if ( ! businessPlan.canStartTrial && premiumPlan.canStartTrial ) {
+			message = this.translate( 'Try WordPress.com Premium free for 14 days, no credit card required' );
+		}
+
+		if ( ! businessPlan.canStartTrial && ! premiumPlan.canStartTrial ) {
+			return null;
+		}
 
 		return (
-			<div className={ classNames } role="main">
-				{ this.sidebarNavigation() }
-				<div id="plans" className="plans has-sidebar">
-					{ this.sectionNavigation() }
-					<PlanList
-						sites={ this.props.sites }
-						plans={ this.props.plans.get() }
-						siteSpecificPlansDetailsList={ this.props.siteSpecificPlansDetailsList }
-						onOpen={ this.openPlan }
-						onSelectPlan={ this.props.onSelectPlan }
-						cart={ this.props.cart } />
-					{ ! hasJpphpBundle && this.comparePlansLink() }
-				</div>
+			<div className="plans__trial-copy">
+				<span className="plans__trial-copy-text">
+					{ preventWidows( message, 2 ) }
+				</span>
 			</div>
 		);
 	},
 
-	sectionNavigation: function() {
+	render: function() {
+		var selectedSite = this.props.sites.getSelectedSite(),
+			hasJpphpBundle,
+			currentPlan;
+
+		if ( this.props.sitePlans.hasLoadedFromServer ) {
+			currentPlan = getCurrentPlan( this.props.sitePlans.data );
+			hasJpphpBundle = isJpphpBundle( currentPlan );
+		}
+
+		if ( this.props.sitePlans.hasLoadedFromServer && currentPlan.freeTrial ) {
+			return (
+				<PlanOverview
+					path={ this.props.context.path }
+					cart={ this.props.cart }
+					destinationType={ this.props.context.params.destinationType }
+					plan={ currentPlan }
+					selectedSite={ selectedSite }
+					store={ this.props.context.store } />
+			);
+		}
+
 		return (
-			<UpgradesNavigation
-				path={ this.props.context.path }
-				cart={ this.props.cart }
-				selectedSite={ this.props.sites.getSelectedSite() } />
+			<div>
+				{ this.renderNotice() }
+
+				<Main>
+					<SidebarNavigation />
+
+					<div id="plans" className="plans has-sidebar">
+						<UpgradesNavigation
+							path={ this.props.context.path }
+							cart={ this.props.cart }
+							selectedSite={ this.props.sites.getSelectedSite() } />
+
+						{ this.renderTrialCopy() }
+
+						<PlanList
+							sites={ this.props.sites }
+							plans={ this.props.plans.get() }
+							enableFreeTrials={ getABTestVariation( 'freeTrials' ) === 'offered' }
+							sitePlans={ this.props.sitePlans }
+							onOpen={ this.openPlan }
+							onSelectPlan={ this.props.onSelectPlan }
+							cart={ this.props.cart } />
+						{ ! hasJpphpBundle && this.comparePlansLink() }
+					</div>
+				</Main>
+			</div>
 		);
 	}
 } );
+
+module.exports = connect(
+	function mapStateToProps( state, props ) {
+		return {
+			sitePlans: getPlansBySite( state, props.sites.getSelectedSite() )
+		};
+	},
+	function mapDispatchToProps( dispatch ) {
+		return {
+			fetchSitePlans( sitePlans, site ) {
+				if ( shouldFetchSitePlans( sitePlans, site ) ) {
+					dispatch( fetchSitePlans( site.ID ) );
+				}
+			}
+		};
+	}
+)( Plans );

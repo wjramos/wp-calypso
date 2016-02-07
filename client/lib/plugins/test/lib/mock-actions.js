@@ -62,6 +62,13 @@ module.exports = {
 		error: null
 	},
 
+	clearPluginUpdate: {
+		type: 'REMOVE_PLUGINS_UPDATE_INFO',
+		action: 'REMOVE_PLUGINS_UPDATE_INFO',
+		site: site,
+		plugin: plugins[ 2 ]
+	},
+
 	updatedPluginError: {
 		type: 'RECEIVE_UPDATED_PLUGIN',
 		action: 'UPDATE_PLUGIN',
@@ -73,30 +80,6 @@ module.exports = {
 			message: 'Full management mode is off for this site.',
 			name: 'UnauthorizedFullAccessError'
 		}
-	},
-	// toggle plugin selection
-	togglePluginSelection: {
-		type: 'TOGGLE_PLUGIN_SELECTION',
-		plugin: plugins[ 2 ]
-	},
-
-	// select plugins
-	selectPluginsAll: {
-		type: 'SELECT_FILTER_PLUGINS',
-		sites: [ site ],
-		filter: 'all'
-	},
-
-	selectPluginsNone: {
-		type: 'SELECT_FILTER_PLUGINS',
-		sites: [ site ],
-		filter: 'none'
-	},
-
-	selectPluginsNeedUpdate: {
-		type: 'SELECT_FILTER_PLUGINS',
-		sites: [ site ],
-		filter: 'updates'
 	},
 
 	// Remove Plugin

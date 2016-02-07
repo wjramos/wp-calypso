@@ -1,7 +1,8 @@
 /**
  * External dependencies
  */
-var page = require( 'page' ),
+var connect = require( 'react-redux' ).connect,
+	page = require( 'page' ),
 	React = require( 'react' ),
 	classnames = require( 'classnames' );
 
@@ -10,14 +11,16 @@ var page = require( 'page' ),
  */
 var observe = require( 'lib/mixins/data-observe' ),
 	EmptyContent = require( 'components/empty-content' ),
+	fetchSitePlans = require( 'state/sites/plans/actions' ).fetchSitePlans,
+	FreeTrialNotice = require( './free-trial-notice' ),
+	getPlansBySite = require( 'state/sites/plans/selectors' ).getPlansBySite,
 	SidebarNavigation = require( 'my-sites/sidebar-navigation' ),
 	RegisterDomainStep = require( 'components/domains/register-domain-step' ),
 	UpgradesNavigation = require( 'my-sites/upgrades/navigation' ),
-	Main = require( 'components/main' );
+	Main = require( 'components/main' ),
+	shouldFetchSitePlans = require( 'lib/plans' ).shouldFetchSitePlans;
 
-module.exports = React.createClass( {
-	displayName: 'DomainSearch',
-
+var DomainSearch = React.createClass( {
 	mixins: [ observe( 'productsList', 'sites' ) ],
 
 	propTypes: {
@@ -37,6 +40,11 @@ module.exports = React.createClass( {
 
 	componentDidMount: function() {
 		this.props.sites.on( 'change', this.checkSiteIsUpgradeable );
+		this.props.fetchSitePlans( this.props.sitePlans, this.props.sites.getSelectedSite() );
+	},
+
+	componentWillReceiveProps: function() {
+		this.props.fetchSitePlans( this.props.sitePlans, this.props.sites.getSelectedSite() );
 	},
 
 	componentWillUnmount: function() {
@@ -73,22 +81,29 @@ module.exports = React.createClass( {
 			);
 		} else {
 			content = (
-				<div className="domain-search__content">
-					<UpgradesNavigation
-						path={ this.props.context.path }
+				<span>
+					<FreeTrialNotice
 						cart={ this.props.cart }
+						sitePlans={ this.props.sitePlans }
 						selectedSite={ selectedSite } />
 
-					<RegisterDomainStep
-						path={ this.props.context.path }
-						suggestion={ this.props.context.params.suggestion }
-						onDomainsAvailabilityChange={ this.handleDomainsAvailabilityChange }
-						cart={ this.props.cart }
-						selectedSite={ selectedSite }
-						offerMappingOption
-						basePath={ this.props.basePath }
-						products={ this.props.productsList.get() } />
-				</div>
+					<div className="domain-search__content">
+						<UpgradesNavigation
+							path={ this.props.context.path }
+							cart={ this.props.cart }
+							selectedSite={ selectedSite } />
+
+						<RegisterDomainStep
+							path={ this.props.context.path }
+							suggestion={ this.props.context.params.suggestion }
+							onDomainsAvailabilityChange={ this.handleDomainsAvailabilityChange }
+							cart={ this.props.cart }
+							selectedSite={ selectedSite }
+							offerMappingOption
+							basePath={ this.props.basePath }
+							products={ this.props.productsList.get() } />
+					</div>
+				</span>
 			);
 		}
 
@@ -100,3 +115,18 @@ module.exports = React.createClass( {
 		);
 	}
 } );
+
+module.exports = connect(
+	function( state, props ) {
+		return { sitePlans: getPlansBySite( state, props.sites.getSelectedSite() ) };
+	},
+	function( dispatch ) {
+		return {
+			fetchSitePlans( sitePlans, site ) {
+				if ( shouldFetchSitePlans( sitePlans, site ) ) {
+					dispatch( fetchSitePlans( site.ID ) );
+				}
+			}
+		};
+	}
+)( DomainSearch );

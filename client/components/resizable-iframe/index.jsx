@@ -1,6 +1,7 @@
 /**
  * External dependencies
  */
+import ReactDom from 'react-dom';
 import React from 'react';
 import debugFactory from 'debug';
 
@@ -56,7 +57,7 @@ export default React.createClass( {
 	},
 
 	getFrameBody: function() {
-		return React.findDOMNode( this.refs.iframe ).contentDocument.body;
+		return ReactDom.findDOMNode( this.refs.iframe ).contentDocument.body;
 	},
 
 	maybeConnect: function() {
@@ -96,6 +97,22 @@ export default React.createClass( {
 					subtree: true
 				} );
 
+				// Hack: Remove viewport unit styles, as these are relative
+				// the iframe root and interfere with our mechanism for
+				// determining the unconstrained page bounds.
+				function removeViewportStyles( ruleOrNode ) {
+					[ 'width', 'height', 'minHeight', 'maxHeight' ].forEach( function( style ) {
+						if ( /^\\d+(vmin|vmax|vh|vw)$/.test( ruleOrNode.style[ style ] ) ) {
+							ruleOrNode.style[ style ] = '';
+						}
+					} );
+				}
+
+				Array.prototype.forEach.call( document.querySelectorAll( '[style]' ), removeViewportStyles );
+				Array.prototype.forEach.call( document.styleSheets, function( stylesheet ) {
+					Array.prototype.forEach.call( stylesheet.cssRules || stylesheet.rules, removeViewportStyles );
+				} );
+
 				document.body.style.position = 'absolute';
 				document.body.setAttribute( 'data-resizable-iframe-connected', '' );
 
@@ -114,7 +131,7 @@ export default React.createClass( {
 	},
 
 	checkMessageForResize: function( event ) {
-		const iframe = React.findDOMNode( this.refs.iframe );
+		const iframe = ReactDom.findDOMNode( this.refs.iframe );
 
 		// Attempt to parse the message data as JSON if passed as string
 		let data = event.data || {};

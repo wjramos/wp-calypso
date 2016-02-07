@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-var React = require( 'react/addons' ),
+var update = require( 'react-addons-update' ),
 	i18n = require( 'lib/mixins/i18n' ),
 	extend = require( 'lodash/object/extend' );
 
@@ -17,11 +17,23 @@ function emptyCart( siteID ) {
 
 function applyCoupon( coupon ) {
 	return function( cart ) {
-		return React.addons.update( cart, {
+		return update( cart, {
 			coupon: { $set: coupon },
 			is_coupon_applied: { $set: false }
 		} );
 	};
+}
+
+function canRemoveFromCart( cart, cartItem ) {
+	if ( productsValues.isCredits( cartItem ) ) {
+		return false;
+	}
+
+	if ( cartItems.hasRenewalItem( cart ) && productsValues.isPrivateRegistration( cartItem ) ) {
+		return false;
+	}
+
+	return true;
 }
 
 /**
@@ -66,7 +78,7 @@ function isFree( cart ) {
 }
 
 function fillInAllCartItemAttributes( cart, products ) {
-	return React.addons.update( cart, {
+	return update( cart, {
 		products: {
 			$apply: function( items ) {
 				return items.map( function( cartItem ) {
@@ -106,19 +118,25 @@ function getRefundPolicy( cart ) {
 	return 'genericRefund';
 }
 
+function isCreditCardPaymentsEnabled( cart ) {
+	return cart.allowed_payment_methods.indexOf( 'WPCOM_Billing_MoneyPress_Paygate' ) >= 0;
+}
+
 function isPayPalExpressEnabled( cart ) {
 	return cart.allowed_payment_methods.indexOf( 'WPCOM_Billing_PayPal_Express' ) >= 0;
 }
 
 module.exports = {
-	emptyCart: emptyCart,
-	applyCoupon: applyCoupon,
-	getNewMessages: getNewMessages,
-	cartItems: cartItems,
-	isPaidForFullyInCredits: isPaidForFullyInCredits,
-	isFree: isFree,
-	fillInAllCartItemAttributes: fillInAllCartItemAttributes,
-	fillInSingleCartItemAttributes: fillInSingleCartItemAttributes,
-	getRefundPolicy: getRefundPolicy,
-	isPayPalExpressEnabled: isPayPalExpressEnabled
+	applyCoupon,
+	canRemoveFromCart,
+	cartItems,
+	emptyCart,
+	fillInAllCartItemAttributes,
+	fillInSingleCartItemAttributes,
+	getNewMessages,
+	getRefundPolicy,
+	isFree,
+	isPaidForFullyInCredits,
+	isPayPalExpressEnabled,
+	isCreditCardPaymentsEnabled
 };

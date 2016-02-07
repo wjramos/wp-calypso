@@ -1,5 +1,8 @@
 export const appStates = Object.freeze( {
+	CANCEL_PENDING: 'importer-canceling',
+	DEFUNCT: 'importer-defunct',
 	DISABLED: 'importer-disabled',
+	EXPIRE_PENDING: 'importer-expire-pending',
 	IMPORT_FAILURE: 'importer-import-failure',
 	IMPORT_SUCCESS: 'importer-import-success',
 	IMPORTING: 'importer-importing',
@@ -11,17 +14,20 @@ export const appStates = Object.freeze( {
 	UPLOADING: 'importer-uploading'
 } );
 
-export const importerTypes = Object.freeze( {
-	WORDPRESS: 'importer-type-wordpress',
-	GHOST: 'importer-type-ghost',
-	MEDIUM: 'importer-type-medium',
-	SQUARESPACE: 'importer-type-squarespace'
-} );
+export const WORDPRESS = 'importer-type-wordpress';
+export const GHOST = 'importer-type-ghost';
+export const MEDIUM = 'importer-type-medium';
+export const SQUARESPACE = 'importer-type-squarespace';
 
 export const actionTypes = Object.freeze( {
 	API_REQUEST: 'importer-api-request',
 	API_FAILURE: 'importer-api-failure',
 	API_SUCCESS: 'importer-api-success',
+
+	LOCK_IMPORT: 'importer-lock-import',
+	UNLOCK_IMPORT: 'importer-unlock-import',
+
+	RECEIVE_IMPORT_STATUS: 'importer-receive-import-status',
 
 	CANCEL_IMPORT: 'importer-cancel',
 	FAIL_UPLOAD: 'importer-fail-upload',
@@ -36,5 +42,6 @@ export const actionTypes = Object.freeze( {
 
 	START_IMPORTING: 'importer-start-importing',
 
-	DEV_SET_STATE: 'dev-set-state'
+	DEV_SET_STATE: 'dev-set-state',
+	RESET_STORE: 'dev-reset-store'
 } );

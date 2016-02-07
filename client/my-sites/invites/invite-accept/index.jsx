@@ -5,6 +5,8 @@ import React from 'react';
 import Debug from 'debug';
 import classNames from 'classnames';
 import page from 'page';
+import { connect } from 'react-redux';
+import { bindActionCreators } from 'redux';
 
 /**
  * Internal Dependencies
@@ -12,35 +14,53 @@ import page from 'page';
 import InviteHeader from 'my-sites/invites/invite-header';
 import LoggedIn from 'my-sites/invites/invite-accept-logged-in';
 import LoggedOut from 'my-sites/invites/invite-accept-logged-out';
-import userModule from 'lib/user';
-import { fetchInvite, displayInviteDeclined } from 'lib/invites/actions';
+import _user from 'lib/user';
+import { fetchInvite } from 'lib/invites/actions';
 import InvitesStore from 'lib/invites/stores/invites-validation';
 import EmptyContent from 'components/empty-content';
+import { successNotice, infoNotice } from 'state/notices/actions';
+import analytics from 'analytics';
+import { getRedirectAfterAccept } from 'my-sites/invites/utils';
+import Notice from 'components/notice';
+import NoticeAction from 'components/notice/notice-action';
+import config from 'config';
+import userUtils from 'lib/user/utils';
+import LocaleSuggestions from 'signup/locale-suggestions';
 
 /**
  * Module variables
  */
 const debug = new Debug( 'calypso:invite-accept' );
-const user = userModule().get();
+const userModule = _user();
 
-export default React.createClass( {
-
-	displayName: 'InviteAccept',
+let InviteAccept = React.createClass( {
 
 	getInitialState() {
 		return {
 			invite: false,
-			error: false
+			error: false,
+			user: userModule.get(),
+			matchEmailError: false
 		}
 	},
 
 	componentWillMount() {
-		fetchInvite( this.props.siteId, this.props.inviteKey );
+		// The site ID and invite key are required, so only fetch if set
+		if ( this.props.siteId && this.props.inviteKey ) {
+			fetchInvite( this.props.siteId, this.props.inviteKey );
+		}
+
+		userModule.on( 'change', this.refreshUser );
 		InvitesStore.on( 'change', this.refreshInvite );
 	},
 
 	componentWillUnmount() {
 		InvitesStore.off( 'change', this.refreshInvite );
+		userModule.off( 'change', this.refreshUser );
+	},
+
+	refreshUser() {
+		this.setState( { user: userModule.get() } );
 	},
 
 	refreshInvite() {
@@ -57,8 +77,13 @@ export default React.createClass( {
 		this.setState( { invite, error } );
 	},
 
-	refreshRedirectPath() {
-		this.setState( { redirectPath: this.getRedirectAfterAccept() } );
+	isMatchEmailError() {
+		const { invite, user } = this.state;
+		return invite && invite.forceMatchingEmail && user.email !== invite.sentTo;
+	},
+
+	isInvalidInvite() {
+		return this.state.error || ! this.props.siteId || ! this.props.inviteKey;
 	},
 
 	getErrorTitle() {
@@ -75,52 +100,140 @@ export default React.createClass( {
 		);
 	},
 
-	getRedirectAfterAccept() {
-		const { invite } = this.state
-		switch ( invite.role ) {
-			case 'viewer':
-			case 'follower':
-				return '/';
-				break;
-			default:
-				return '/posts/' + this.props.siteId;
-		}
+	clickedNoticeSiteLink() {
+		analytics.tracks.recordEvent( 'calypso_invite_accept_notice_site_link_click' );
 	},
 
 	decline() {
+		this.props.infoNotice( this.translate( 'You declined to join.' ), { displayOnNextPage: true } );
 		page( '/' );
-		displayInviteDeclined();
+	},
+
+	signInLink() {
+		const invite = this.state.invite;
+		let loginUrl = config( 'login_url' ) + '?redirect_to=' + encodeURIComponent( window.location.href );
+
+		if ( invite && invite.sentTo ) {
+			let presetEmail = '&email_address=' + encodeURIComponent( invite.sentTo );
+			loginUrl += presetEmail;
+		}
+
+		return loginUrl;
+	},
+
+	signUpLink() {
+		userUtils.logout( window.location.href );
+	},
+
+	localeSuggestions() {
+		if ( this.state.user || ! this.props.locale ) {
+			return;
+		}
+
+		return (
+			<LocaleSuggestions path={ this.props.path } locale={ this.props.locale } />
+		);
 	},
 
 	renderForm() {
-		if ( ! this.state.invite ) {
+		const { invite, user } = this.state;
+		if ( ! invite ) {
 			debug( 'Not rendering form - Invite not set' );
 			return null;
 		}
 		debug( 'Rendering invite' );
+
+		let props = {
+			invite: this.state.invite,
+			redirectTo: getRedirectAfterAccept( this.state.invite ),
+			decline: this.decline,
+			signInLink: this.signInLink(),
+			forceMatchingEmail: this.isMatchEmailError()
+		};
+
 		return user
-			? <LoggedIn { ...this.state.invite } redirectTo={ this.getRedirectAfterAccept() } decline={ this.decline } user={ user } />
-			: <LoggedOut { ...this.state.invite } redirectTo={ this.getRedirectAfterAccept() } decline={ this.decline } />;
+			? <LoggedIn { ... props } user={ this.state.user } />
+			: <LoggedOut { ... props } />;
 	},
 
 	renderError() {
 		debug( 'Rendering error: ' + JSON.stringify( this.state.error ) );
+		if ( this.state.error ) {
+			const props = {
+				line: this.translate( 'Would you like to accept the invite with a different account?' ),
+				action: this.translate( 'Switch Accounts' ),
+				actionURL: config( 'login_url' ) + '?redirect_to=' + encodeURIComponent( window.location.href ),
+				illustration: '/calypso/images/drake/drake-whoops.svg'
+			};
+			switch ( this.state.error.error ) {
+				case 'already_member':
+					return ( <EmptyContent { ... props } title={ this.translate( 'You are already a member of this blog.' ) } /> );
+					break;
+				case 'already_subscribed':
+					return ( <EmptyContent { ... props } title={ this.translate( 'You are already a follower on this blog.' ) } /> );
+					break;
+			}
+		}
 		return (
 			<EmptyContent
 				title={ this.getErrorTitle() }
 				line={ this.getErrorMessage() }
-				illustration={ '/calypso/images/drake/drake-whoops.svg' }
-			/>
+				illustration={ '/calypso/images/drake/drake-whoops.svg' } />
+		);
+	},
+
+	renderNoticeAction() {
+		const { user, invite } = this.state;
+
+		if ( ! user && ! invite.knownUser ) {
+			return;
+		}
+
+		let props,
+			actionText = this.translate( 'Switch Accounts' );
+
+		if ( ! user ) {
+			actionText = this.translate( 'Sign In' );
+		}
+
+		if ( invite.knownUser ) {
+			props = { href: this.signInLink() };
+		} else {
+			props = { onClick: this.signUpLink };
+		}
+
+		return (
+			<NoticeAction { ... props } >
+				{ actionText }
+			</NoticeAction>
 		);
 	},
 
 	render() {
-		let classes = classNames( 'invite-accept', { 'is-error': !! this.state.error } );
+		const formClasses = classNames( 'invite-accept__form', { 'is-error': !! this.isInvalidInvite() } ),
+			{ invite, user } = this.state;
+
 		return (
-			<div className={ classes }>
-				{ ! this.state.error && <InviteHeader { ...this.state.invite } /> }
-				{ this.state.error ? this.renderError() : this.renderForm() }
+			<div className="invite-accept">
+				{ this.localeSuggestions() }
+				<div className={ formClasses }>
+					{ this.isMatchEmailError() && user &&
+						<Notice
+							text={ this.translate( 'This invite is only valid for %(email)s.', { args: { email: invite.sentTo } } ) }
+							status="is-error"
+							showDismiss={ false } >
+							{ this.renderNoticeAction() }
+						</Notice>
+					}
+					{ ! this.isInvalidInvite() && <InviteHeader { ... invite } /> }
+					{ this.isInvalidInvite() ? this.renderError() : this.renderForm() }
+				</div>
 			</div>
 		);
 	}
 } );
+
+export default connect(
+	null,
+	dispatch => bindActionCreators( { successNotice, infoNotice }, dispatch )
+)( InviteAccept );

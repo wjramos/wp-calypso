@@ -1,11 +1,14 @@
 /**
  * External dependencies
  */
+import ReactDom from 'react-dom';
 import React from 'react';
+import LinkedStateMixin from 'react-addons-linked-state-mixin';
 
 /**
  * Internal dependencies
  */
+import config from 'config';
 import Main from 'components/main';
 import FormTextInput from 'components/forms/form-text-input';
 import FormPasswordInput from 'components/forms/form-password-input';
@@ -28,14 +31,14 @@ const LostPassword = React.createClass( {
 					{ this.translate( 'Lost your password?' ) }
 				</a>
 			</p>
-        );
+		);
 	}
 } );
 
 module.exports = React.createClass( {
 	displayName: 'Auth',
 
-	mixins: [ React.addons.LinkedStateMixin, eventRecorder ],
+	mixins: [ LinkedStateMixin, eventRecorder ],
 
 	componentDidMount: function() {
 		AuthStore.on( 'change', this.refreshData );
@@ -51,7 +54,7 @@ module.exports = React.createClass( {
 
 	componentDidUpdate() {
 		if ( this.state.requires2fa && this.state.inProgress === false ) {
-			this.refs.auth_code.getDOMNode().focus();
+			ReactDom.findDOMNode( this.refs.auth_code ).focus();
 		}
 	},
 
@@ -150,7 +153,7 @@ module.exports = React.createClass( {
 				</a>
 				<div className="auth__links">
 					<a href="https://jetpack.me/support/site-management/" target="_blank">{ this.translate( 'Add self-hosted site' ) }</a>
-					<a href="https://wordpress.com/signup" target="_blank">{ this.translate( 'Create account' ) }</a>
+					<a href={ 'https://wordpress.com' + config( 'signup_url' ) } target="_blank">{ this.translate( 'Create account' ) }</a>
 				</div>
 			</Main>
 		);

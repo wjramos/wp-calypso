@@ -7,13 +7,10 @@ var React = require( 'react' ),
 /**
  * Internal dependencies
  */
-var SidebarMenuItem = require( './sidebar-menu-item' ),
+var SidebarItem = require( 'layout/sidebar/item' ),
 	config = require( 'config' ),
 	postTypesList = require( 'lib/post-types-list' )();
 
-/**
- * Component
- */
 var PublishMenu = React.createClass( {
 
 	propTypes: {
@@ -146,10 +143,14 @@ var PublishMenu = React.createClass( {
 			link = menuItem.link + this.props.siteSuffix;
 		}
 
+		let preload;
+
 		if ( menuItem.name === 'post' ) {
 			icon = 'posts';
+			preload = 'posts-pages';
 		} else if ( menuItem.name === 'page' ) {
 			icon = 'pages';
+			preload = 'posts-pages';
 		} else if ( menuItem.name === 'jetpack-portfolio' ) {
 			icon = 'folder';
 		} else if ( menuItem.name === 'jetpack-testimonial' ) {
@@ -159,13 +160,14 @@ var PublishMenu = React.createClass( {
 		}
 
 		return (
-			<SidebarMenuItem key={ menuItem.name }
+			<SidebarItem key={ menuItem.name }
 				label={ menuItem.label }
 				className={ className }
 				link={ link }
 				buttonLink={ menuItem.buttonLink }
 				onNavigate={ this.props.onNavigate }
 				icon={ icon }
+				preloadSectionName={ preload }
 			/>
 		);
 	},

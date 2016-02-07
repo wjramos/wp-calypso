@@ -1,13 +1,16 @@
 /**
  * External Dependencies
  */
-var React = require( 'react/addons' ),
+var ReactDom = require( 'react-dom' ),
+	React = require( 'react' ),
+	PureRenderMixin = require( 'react-pure-render/mixin' ),
 	assign = require( 'lodash/object/assign' ),
 	classes = require( 'component-classes' ),
 	debug = require( 'debug' )( 'calypso:reader-full-post' ), //eslint-disable-line no-unused-vars
 	moment = require( 'moment' ),
 	omit = require( 'lodash/object/omit' ),
-	twemoji = require( 'twemoji' );
+	twemoji = require( 'twemoji' ),
+	page = require( 'page' );
 
 /**
  * Internal Dependencies
@@ -26,19 +29,20 @@ var analytics = require( 'analytics' ),
 	PostErrors = require( 'reader/post-errors' ),
 	PostStore = require( 'lib/feed-post-store' ),
 	PostStoreActions = require( 'lib/feed-post-store/actions' ),
-	SiteIcon = require( 'components/site-icon' ),
-	SiteLink = require( 'reader/site-link' ),
+	Site = require( 'my-sites/site' ),
 	SiteState = require( 'lib/reader-site-store/constants' ).state,
 	SiteStore = require( 'lib/reader-site-store' ),
 	SiteStoreActions = require( 'lib/reader-site-store/actions' ),
+	FollowButton = require( 'reader/follow-button' ),
 	utils = require( 'reader/utils' ),
 	LikeHelper = require( 'reader/like-helper' ),
-	CommentStore = require( 'lib/comment-store/comment-store' ),
 	stats = require( 'reader/stats' ),
 	PostExcerptLink = require( 'reader/post-excerpt-link' ),
 	ShareButton = require( 'reader/share' ),
+	ShareHelper = require( 'reader/share/helper' ),
 	DiscoverHelper = require( 'reader/discover/helper' ),
-	DiscoverVisitLink = require( 'reader/discover/visit-link' );
+	DiscoverVisitLink = require( 'reader/discover/visit-link' ),
+	readerRoute = require( 'reader/route' );
 
 var loadingPost = {
 		URL: '',
@@ -84,22 +88,35 @@ function readerPageView( blogId, blogUrl, postId, isPrivate ) {
  */
 FullPostView = React.createClass( {
 
-	mixins: [ React.addons.PureRenderMixin ],
+	mixins: [ PureRenderMixin ],
+
+	hasScrolledToAnchor: false,
 
 	componentDidMount: function() {
 		this._parseEmoji();
+		this.checkForCommentAnchor();
 	},
 
 	componentDidUpdate: function() {
 		this._parseEmoji();
+		this.checkForCommentAnchor();
+	},
+
+	// if comments updated and we have not scrolled to the anchor yet, then scroll
+	checkForCommentAnchor: function() {
+		const hash = window.location.hash.substr( 1 );
+		if ( this.refs.commentList && hash.indexOf( 'comments' ) > -1 && ! this.hasScrolledToAnchor ) {
+			this.scrollToComments();
+		}
 	},
 
 	scrollToComments: function() {
 		if ( ! this.isMounted() ) {
 			return;
 		}
-		let commentListNode = React.findDOMNode( this.refs.commentList );
+		let commentListNode = ReactDom.findDOMNode( this.refs.commentList );
 		if ( commentListNode ) {
+			this.hasScrolledToAnchor = true;
 			commentListNode.scrollIntoView( { behavior: 'smooth' } );
 		}
 	},
@@ -108,13 +125,28 @@ FullPostView = React.createClass( {
 		stats.recordPermalinkClick( 'full_post_title' );
 	},
 
+	pickSite: function( event ) {
+		if ( utils.isSpecialClick( event ) ) {
+			return;
+		}
+
+		const url = readerRoute.getStreamUrlFromPost( this.props.post );
+		page.show( url );
+	},
+
+	handleSiteClick: function( event ) {
+		if ( ! utils.isSpecialClick( event ) ) {
+			event.preventDefault();
+		}
+	},
+
 	render: function() {
 		var post = this.props.post,
 			site = this.props.site,
+			siteish = utils.siteishFromSiteAndPost( site, post ),
 			hasFeaturedImage = post &&
-				! ( post.display_type & DISPLAY_TYPES.CANONICAL_IN_CONTENT ) &&
 				post.canonical_image &&
-				this.props.post.canonical_image.width > 620,
+				! ( post.display_type & DISPLAY_TYPES.CANONICAL_IN_CONTENT ),
 			articleClasses = [ 'reader__full-post' ],
 			postContent,
 			shouldShowExcerptOnly = ( post.use_excerpt ? post.use_excerpt : false ),
@@ -137,6 +169,13 @@ FullPostView = React.createClass( {
 			} else {
 				post = errorPost;
 			}
+		} else {
+			if ( post.site_ID ) {
+				articleClasses.push( 'blog-' + post.site_ID );
+			}
+			if ( post.feed_ID ) {
+				articleClasses.push( 'feed-' + post.feed_ID );
+			}
 		}
 
 		if ( hasFeaturedImage ) {
@@ -151,29 +190,41 @@ FullPostView = React.createClass( {
 			postContent = post.content;
 		}
 
+		/*eslint-disable react/no-danger*/
 		return (
 			<div>
 				<article className={ articleClasses } id="modal-full-post" ref="article">
 
 					<PostErrors post={ post } />
 
-					{ hasFeaturedImage ?
-						<div className="full-post__featured-image test">
-							<img src={ this.props.post.canonical_image.uri } height={ this.props.post.canonical_image.height } width={ this.props.post.canonical_image.width } />
-						</div> : null }
+					<div className="full-post__header">
+						<Site site={ siteish }
+							href={ post.site_URL }
+							onSelect={ this.pickSite }
+							onClick={ this.handleSiteClick } />
+
+						<FollowButton siteUrl={ post.site_URL } />
+					</div>
+
+					{ hasFeaturedImage
+						? <div className="full-post__featured-image">
+								<img src={ this.props.post.canonical_image.uri } height={ this.props.post.canonical_image.height } width={ 	this.props.post.canonical_image.width } />
+							</div>
+						: null }
 
 					{ post.title ? <h1 className="reader__post-title" onClick={ this.handlePermalinkClick }><ExternalLink className="reader__post-title-link" href={ post.URL } target="_blank" icon={ false }>{ post.title }</ExternalLink></h1> : null }
 
 					<PostByline post={ post } site={ site } icon={ true }/>
 
-					<div className="reader__full-post-content" dangerouslySetInnerHTML={{ __html: postContent }}></div>
+					<div className="reader__full-post-content" dangerouslySetInnerHTML={ { __html: postContent } }></div>
 
 					{ shouldShowExcerptOnly && ! isDiscoverPost ? <PostExcerptLink siteName={ siteName } postUrl={ post.URL } /> : null }
 					{ isDiscoverPost ? <DiscoverVisitLink siteName={ discoverSiteName } siteUrl={ discoverSiteUrl } /> : null }
-					{ this.props.shouldShowComments ? <PostCommentList ref="commentList" post={ post } /> : null }
+					{ this.props.shouldShowComments ? <PostCommentList ref="commentList" post={ post } onCommentsUpdate={ this.checkForCommentAnchor } /> : null }
 				</article>
 			</div>
 		);
+		/*eslint-enable react/no-danger*/
 	},
 
 	_generateButtonClickHandler: function( clickHandler ) {
@@ -184,7 +235,7 @@ FullPostView = React.createClass( {
 	},
 
 	_parseEmoji: function() {
-		twemoji.parse( React.findDOMNode( this.refs.article ) );
+		twemoji.parse( ReactDom.findDOMNode( this.refs.article ) );
 	}
 
 } );
@@ -202,7 +253,7 @@ FullPostView = React.createClass( {
  */
 FullPostDialog = React.createClass( {
 
-	mixins: [ React.addons.PureRenderMixin ],
+	mixins: [ PureRenderMixin ],
 
 	componentWillMount: function() {
 		classes( document.documentElement ).add( 'detail-page-active' );
@@ -247,32 +298,21 @@ FullPostDialog = React.createClass( {
 			site = this.props.site,
 			shouldShowComments = false,
 			shouldShowLikes = false,
+			shouldShowShare = false,
 			buttons = [
 				{
 					label: this.translate( 'Back', { context: 'Go back in browser history' } ),
 					action: 'close',
 					isPrimary: true
 				}
-			], siteName, siteLink;
-
-		siteName = utils.siteNameFromSiteAndPost( site, post );
-
-		siteLink = this.props.suppressSiteNameLink ?
-			siteName :
-			( <SiteLink post={ post }>{ siteName }</SiteLink> );
+			];
 
 		if ( post && ! post._state ) {
 			shouldShowComments = PostCommentHelper.shouldShowComments( post );
 			shouldShowLikes = LikeHelper.shouldShowLikes( post );
+			shouldShowShare = ShareHelper.shouldShowShare( post );
 
-			buttons.push(
-				<div className="full-post__site" key="site-name">
-					<SiteIcon site={ site && site.toJS() } size={ 24 } />
-					<span className="full-post__site-name">{ siteLink }</span>
-				</div>
-			);
-
-			buttons.push( <PostOptions key="post-options" post={ post } site={ site } onBlock={ this.props.onClose } /> );
+			buttons.push( <PostOptions key="post-options" position="bottom left" post={ post } site={ site } onBlock={ this.props.onClose } /> );
 
 			if ( shouldShowLikes ) {
 				buttons.push( <LikeButton key="like-button" siteId={ post.site_ID } postId={ post.ID } tagName="div" forceCounter={ true } /> );
@@ -282,7 +322,9 @@ FullPostDialog = React.createClass( {
 				buttons.push( <CommentButton key="comment-button" commentCount={ this.props.commentCount } onClick={ this.handleCommentButtonClick } tagName="div" /> );
 			}
 
-			buttons.push( <ShareButton post={ post } position="bottom left" tagName="div" /> );
+			if ( shouldShowShare ) {
+				buttons.push( <ShareButton post={ post } position="bottom left" tagName="div" /> );
+			}
 		}
 
 		buttons = buttons.map( function( button ) {
@@ -298,14 +340,13 @@ FullPostDialog = React.createClass( {
 				buttons={ buttons }
 				baseClassName="detail-page"
 				onClose={ this.handleClose }
-				onClickOutside= { this.handleClickOutside}
+				onClickOutside= { this.handleClickOutside }
 				onClosed={ this.props.onClosed } >
 				<FullPostView
 					ref="fullPost"
 					post={ this.props.post }
 					site={ this.props.site }
-					shouldShowComments={ shouldShowComments }
-				/>
+					shouldShowComments={ shouldShowComments } />
 			</Dialog>
 		);
 	}
@@ -330,7 +371,7 @@ function getSite( siteId ) {
 
 FullPostContainer = React.createClass( {
 
-	mixins: [ React.addons.PureRenderMixin ],
+	mixins: [ PureRenderMixin ],
 
 	getInitialState: function() {
 		return assign( { isVisible: false }, this.getStateFromStores() );
@@ -379,13 +420,23 @@ FullPostContainer = React.createClass( {
 
 		if ( ! this.hasSentPageView &&
 				post &&
-				site && site.get( 'state' ) === SiteState.COMPLETE &&
-				( site.get( 'is_private' ) || isNotAdmin ) ) {
-			readerPageView( site.get( 'ID' ), site.get( 'URL' ), post.ID, site.get( 'is_private' ) );
+				site && site.get( 'state' ) === SiteState.COMPLETE ) {
+			if ( site.get( 'is_private' ) || isNotAdmin ) {
+				readerPageView( site.get( 'ID' ), site.get( 'URL' ), post.ID, site.get( 'is_private' ) );
+			}
 			this.hasSentPageView = true;
 		}
 
-		analytics.tracks.recordEvent( 'calypso_reader_article_opened' );
+		if ( ! this.hasLoaded && post && post._state !== 'pending' ) {
+			analytics.tracks.recordEvent( 'calypso_reader_article_opened', {
+				blog_id: ! post.is_external && post.site_ID > 0 ? post.site_ID : undefined,
+				post_id: ! post.is_external && post.ID > 0 ? post.ID : undefined,
+				feed_id: post.feed_ID > 0 ? post.feed_ID : undefined,
+				feed_item_id: post.feed_item_ID > 0 ? post.feed_item_ID : undefined,
+				is_jetpack: post.is_jetpack
+			} );
+			this.hasLoaded = true;
+		}
 	},
 
 	// Add change listeners to stores
@@ -395,13 +446,14 @@ FullPostContainer = React.createClass( {
 		SiteStore.on( 'change', this._onChange );
 
 		this.hasSentPageView = false;
+		this.hasLoaded = false;
 
 		this.attemptToSendPageView();
 
 		// This is a trick to make the dialog animations happy. We have to initially render the dialog
 		// as hidden, then set it to visible to trigger the animation.
 		process.nextTick( function() {
-			this.setState( { isVisible: true } );
+			this.setState( { isVisible: true } ); //eslint-disable-line react/no-did-mount-set-state
 		}.bind( this ) );
 	},
 
@@ -414,6 +466,7 @@ FullPostContainer = React.createClass( {
 			prevProps.feedId !== this.props.feedId ||
 			prevProps.blogId !== this.props.blogId ) {
 			this.hasSentPageView = false;
+			this.hasLoaded = false;
 			this.attemptToSendPageView();
 		}
 	},

@@ -11,6 +11,8 @@
 	"wpcom_signup_id": "39911",
 	"wpcom_signup_key": "cOaYKdrkgXz8xY7aysv4fU6wL6sK5J8a6ojReEIAPwggsznj4Cb6mW0nffTxtYT8",
 	"mc_analytics_enabled": false,
+	"boom_analytics_enabled": false,
+	"boom_analytics_key": "development",
 	"google_analytics_enabled": false,
 	"google_analytics_key": "UA-10673494-15",
 	"google_adwords_conversion_id": 1067250390,
@@ -26,6 +28,7 @@
 	"features": {
 		"hello-world": true,
 		"code-splitting": true,
+		"server-side-rendering": true,
 
 		"reader": true,
 		"reader/teams": true,
@@ -44,7 +47,8 @@
 		"post-editor/pages": true,
 		"post-editor-github-link": false,
 		"post-editor/post-type-switch": false,
-		"editor-drafts": true,
+		"post-editor/contact-form": true,
+		"post-editor/media-advanced": true,
 
 		"manage/media": true,
 		"manage/posts": true,
@@ -54,13 +58,13 @@
 		"manage/plugins/browser": true,
 		"manage/plugins/compatibility-warning": false,
 		"manage/plugins/cache": false,
+		"manage/plugins/setup": true,
 
 		"manage/export": true,
 		"manage/security": true,
 		"manage/option_sync_non_public_post_stati": true,
 
 		"manage/stats": true,
-		"manage/stats/insights": true,
 
 		"manage/site-settings/analytics": true,
 		"manage/site-settings/delete-site": true,
@@ -77,13 +81,13 @@
 		"manage/themes": true,
 		"manage/themes-jetpack": true,
 		"manage/themes/logged-out": true,
-		"premium-themes": true,
 		"press-this": true,
 
 		"manage/plans": true,
 		"manage/jetpack-plans": true,
 
 		"upgrades/checkout": true,
+		"upgrades/credit-cards": true,
 		"upgrades/domain-management/contacts-privacy": true,
 		"upgrades/domain-management/email": true,
 		"upgrades/domain-management/list": true,
@@ -91,7 +95,8 @@
 		"upgrades/domain-management/site-redirect": true,
 		"upgrades/domain-management/transfer": true,
 		"upgrades/domain-search": true,
-		"upgrades/free-trials": true,
+		"upgrades/in-app-purchase": false,
+		"upgrades/premium-themes": true,
 
 		"manage/customize": true,
 
@@ -116,11 +121,13 @@
 		"me/security/checkup": true,
 		"me/notifications": true,
 		"me/next-steps": true,
-		"me/credit-cards": true,
 		"me/find-friends": false,
 		"me/trophies": false,
 
 		"help": true,
+		"support-user": true,
+
+		"persist-redux": false,
 
 		"notifications2beta": true,
 		"muse": true,
@@ -136,9 +143,10 @@
 		"settings/security/monitor": true,
 		"settings/security/scan": true,
 		"ad-tracking": false,
+		"desktop-promo": true,
 
 		"accept-invite": true,
-
+		"perfmon": false,
 		"mailing-lists/unsubscribe": true
 	},
 	"muse_supported_themes": [

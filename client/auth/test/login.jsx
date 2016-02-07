@@ -5,12 +5,13 @@ require( 'lib/react-test-env-setup' )();
  * External dependencies
  */
 
-const React = require( 'react/addons' ),
+const ReactDom = require( 'react-dom' ),
+	React = require( 'react' ),
 	i18n = require( 'lib/mixins/i18n' ),
 	expect = require( 'chai' ).expect,
 	sinon = require( 'sinon' ),
 	ReactInjection = require( 'react/lib/ReactInjection' ),
-	TestUtils = React.addons.TestUtils;
+	TestUtils = require( 'react-addons-test-utils' );
 
 /**
  * Internal dependencies
@@ -22,7 +23,7 @@ i18n.initialize();
 ReactInjection.Class.injectMixin( i18n.mixin );
 
 let Login = require( '../login.jsx' );
-const page = React.render( <Login />, document.body );
+const page = ReactDom.render( <Login />, document.body );
 
 describe( 'LoginTest', function() {
 	it( 'OTP is not present on first render', function( done ) {

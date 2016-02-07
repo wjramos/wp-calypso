@@ -2,9 +2,9 @@
  * External Dependencies
  */
 var page = require( 'page' ),
+	ReactDom = require( 'react-dom' ),
 	React = require( 'react' ),
 	qs = require( 'querystring' ),
-	url = require( 'url' ),
 	debug = require( 'debug' )( 'calypso:my-sites:posts' );
 
 /**
@@ -26,15 +26,10 @@ module.exports = {
 			siteID = route.getSiteFragment( context.path ),
 			author = ( context.params.author === 'my' ) ? user.get().ID : null,
 			statusSlug = ( author ) ? context.params.status : context.params.author,
-			search = qs.parse( context.querystring ).s,
+			search = context.query.s,
 			basePath = route.sectionify( context.path ),
 			analyticsPageTitle = 'Blog Posts',
 			baseAnalyticsPath;
-
-		if ( !search && context.prevPath ) {
-			//Guessing search parameters from previous url
-			search = qs.parse( url.parse( context.prevPath ).query ).s;
-		}
 
 		function shouldRedirectMyPosts( author, sites ) {
 			var selectedSite = sites.getSelectedSite() || {};
@@ -81,7 +76,7 @@ module.exports = {
 
 		analytics.pageView.record( baseAnalyticsPath, analyticsPageTitle );
 
-		React.render(
+		ReactDom.render(
 			React.createElement( Posts, {
 				context: context,
 				siteID: siteID,

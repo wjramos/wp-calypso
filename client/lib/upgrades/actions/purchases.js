@@ -15,7 +15,8 @@ import wp from 'lib/wp';
 const debug = debugFactory( 'calypso:upgrades:actions:purchases' ),
 	wpcom = wp.undocumented();
 
-const PURCHASES_FETCH_ERROR_MESSAGE = i18n.translate( 'There was an error retrieving purchases.' );
+const PURCHASES_FETCH_ERROR_MESSAGE = i18n.translate( 'There was an error retrieving purchases.' ),
+	PURCHASE_REMOVE_ERROR_MESSAGE = i18n.translate( 'There was an error removing the purchase.' );
 
 function cancelPurchase( purchaseId, onComplete ) {
 	wpcom.cancelPurchase( purchaseId, ( error, data ) => {
@@ -52,6 +53,12 @@ function cancelPrivateRegistration( purchaseId, onComplete ) {
 		}
 
 		onComplete( success );
+	} );
+}
+
+function clearPurchases() {
+	Dispatcher.handleViewAction( {
+		type: ActionTypes.PURCHASES_REMOVE
 	} );
 }
 
@@ -128,7 +135,7 @@ function fetchStoredCards() {
 	} );
 }
 
-function fetchUserPurchases() {
+function fetchUserPurchases( userId ) {
 	Dispatcher.handleViewAction( {
 		type: ActionTypes.PURCHASES_USER_FETCH
 	} );
@@ -144,17 +151,44 @@ function fetchUserPurchases() {
 		} else {
 			Dispatcher.handleServerAction( {
 				type: ActionTypes.PURCHASES_USER_FETCH_COMPLETED,
-				purchases: purchasesAssembler.createPurchasesArray( data )
+				purchases: purchasesAssembler.createPurchasesArray( data ),
+				userId
 			} );
 		}
+	} );
+}
+
+function removePurchase( purchaseId, userId, onComplete ) {
+	Dispatcher.handleViewAction( {
+		type: ActionTypes.PURCHASE_REMOVE,
+		purchaseId
+	} );
+
+	wpcom.me().deletePurchase( purchaseId, ( error, data ) => {
+		if ( error ) {
+			Dispatcher.handleServerAction( {
+				type: ActionTypes.PURCHASE_REMOVE_FAILED,
+				error: error.message || PURCHASE_REMOVE_ERROR_MESSAGE
+			} );
+		} else {
+			Dispatcher.handleServerAction( {
+				type: ActionTypes.PURCHASE_REMOVE_COMPLETED,
+				purchases: purchasesAssembler.createPurchasesArray( data.purchases ),
+				userId
+			} );
+		}
+
+		onComplete( data && data.success );
 	} );
 }
 
 export {
 	cancelPurchase,
 	cancelPrivateRegistration,
+	clearPurchases,
 	deleteStoredCard,
 	fetchSitePurchases,
 	fetchStoredCards,
-	fetchUserPurchases
+	fetchUserPurchases,
+	removePurchase
 };

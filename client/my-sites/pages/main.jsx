@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-var React = require( 'react/addons' ),
+var React = require( 'react' ),
 	debug = require( 'debug' )( 'calypso:my-sites:pages:pages' );
 
 /**
@@ -73,7 +73,6 @@ module.exports = React.createClass( {
 					</NavTabs>
 					<Search
 						pinned={ true }
-						siteID={ this.props.siteID }
 						onSearch={ this.doSearch }
 						initialValue={ this.props.search }
 						placeholder={ searchStrings[ status ] }

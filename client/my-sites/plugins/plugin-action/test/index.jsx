@@ -2,8 +2,9 @@
  * External dependencies
  */
 var assert = require( 'assert' ),
-	React = require( 'react/addons' ),
-	TestUtils = React.addons.TestUtils;
+	ReactDom = require( 'react-dom' ),
+	React = require( 'react' ),
+	TestUtils = require( 'react-addons-test-utils' );
 
 /**
  * Internal dependencies
@@ -14,7 +15,7 @@ require( 'lib/react-test-env-setup' )();
 
 describe( 'PluginAction', function() {
 	afterEach( function() {
-		React.unmountComponentAtNode( document.body );
+		ReactDom.unmountComponentAtNode( document.body );
 	} );
 
 	describe( 'rendering with form toggle', function() {

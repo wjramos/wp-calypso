@@ -1,8 +1,7 @@
 /**
  * External dependencies
  */
-var debug = require( 'debug' )( 'calypso:site:jetpack' ),
-	find = require( 'lodash/collection/find' );
+var debug = require( 'debug' )( 'calypso:site:jetpack' );
 
 /**
  * Internal dependencies
@@ -27,12 +26,17 @@ function JetpackSite( attributes ) {
 
 JetpackSite.prototype.updateComputedAttributes = function() {
 	JetpackSite.super_.prototype.updateComputedAttributes.apply( this );
+	if ( this.jetpack_modules ) {
+		this.modules = this.jetpack_modules;
+		delete this.jetpack_modules;
+	}
 	this.hasMinimumJetpackVersion = versionCompare( this.options.jetpack_version, config( 'jetpack_min_version' ) ) >= 0;
 	// Only sites that have the minimum Jetpack Version and siteurl matches the main_network_site can update plugins
 	// unmapped_url is more likely to equal main_network_site because they should both be set to siteurl option
 	// is_multi_network checks to see that a site is not part of a multi network
 	// Since there is no primary network we disable updates for that case
 	this.canUpdateFiles = SiteUtils.canUpdateFiles( this );
+	this.canAutoupdateFiles = SiteUtils.canAutoupdateFiles( this );
 	this.hasJetpackMenus = versionCompare( this.options.jetpack_version, '3.5-alpha' ) >= 0;
 	this.hasJetpackThemes = versionCompare( this.options.jetpack_version, '3.7-beta' ) >= 0;
 };
@@ -46,7 +50,7 @@ JetpackSite.prototype.canManage = function() {
 	// for versions 3.4 and higher, canManage can be determined by the state of the Manage Module
 	if ( this.versionCompare( '3.4', '>=' ) ) {
 		// if we haven't fetched the modules yet, we default to true
-		if ( this.modulesFetched ) {
+		if ( this.modules ) {
 			return this.isModuleActive( 'manage' );
 		}
 		return true;
@@ -72,32 +76,6 @@ JetpackSite.prototype.fetchAvailableUpdates = function() {
 	}.bind( this ) );
 };
 
-JetpackSite.prototype.fetchModules = function() {
-	if ( ! this.hasMinimumJetpackVersion || this.fetchingModules ) {
-		return;
-	}
-
-	this.fetchingModules = true;
-	wpcom.undocumented().jetpackModules( this.ID, function( error, data ) {
-		if ( error || ! data.modules ) {
-			debug( 'error fetching Modules data from api', error );
-			return;
-		}
-
-		this.fetchingModules = false;
-		this.modulesFetched = true;
-		this.set( { modules: data.modules } );
-		this.emit( 'change' );
-	}.bind( this ) );
-};
-
-JetpackSite.prototype.getModule = function( moduleId ) {
-	if ( this.modulesFetched ) {
-		return find( this.modules, { id: moduleId } );
-	}
-	this.fetchModules();
-};
-
 JetpackSite.prototype.isSecondaryNetworkSite = function() {
 	return this.options.is_multi_site &&
 		this.options.unmapped_url !== this.options.main_network_site;
@@ -109,13 +87,7 @@ JetpackSite.prototype.isMainNetworkSite = function() {
 };
 
 JetpackSite.prototype.isModuleActive = function( moduleId ) {
-	var module = this.getModule( moduleId );
-
-	if ( module ) {
-		return module.active;
-	}
-
-	return false;
+	return this.modules && this.modules.indexOf( moduleId ) > -1;
 };
 
 JetpackSite.prototype.verifyModulesActive = function( moduleIds, callback ) {
@@ -123,12 +95,6 @@ JetpackSite.prototype.verifyModulesActive = function( moduleIds, callback ) {
 
 	if ( ! Array.isArray( moduleIds ) ) {
 		moduleIds = [ moduleIds ];
-	}
-
-	if ( ! this.modulesFetched ) {
-		this.fetchModules();
-		this.once( 'change', this.verifyModulesActive.bind( this, moduleIds, callback ) );
-		return;
 	}
 
 	modulesActive = moduleIds.every( function( moduleId ) {
@@ -152,8 +118,8 @@ JetpackSite.prototype.handleError = function( error, action, plugin, module ) {
 		return;
 	}
 
-	if ( module && module.name ) {
-		moduleTranslationArgs = { args: { module: module.name, site: this.domain } };
+	if ( module ) {
+		moduleTranslationArgs = { args: { module: module, site: this.domain } };
 	}
 
 	remoteManagementUrl = this.getRemoteManagementURL();
@@ -249,63 +215,53 @@ JetpackSite.prototype.callHome = function() {
 };
 
 JetpackSite.prototype.activateModule = function( moduleId, callback ) {
-	var module = this.getModule( moduleId );
 	debug( 'activate module', moduleId );
 
-	if ( ! module.id ) {
+	if ( ! moduleId ) {
 		callback && callback( new Error( 'No id' ) );
 		return;
 	}
 
-	if ( module.active ) {
+	if ( this.isModuleActive( moduleId ) ) {
 		// Nothing to do
 		callback();
 		return;
 	}
 
-	this.toggleModule( module, callback );
+	this.toggleModule( moduleId, callback );
 };
 
 JetpackSite.prototype.deactivateModule = function( moduleId, callback ) {
-	var module = this.getModule( moduleId );
 	debug( 'deactivate module', moduleId );
 
-	if ( ! module.id ) {
-		callback && callback( new Error( 'No id' ) );
-		return;
-	}
-
-	if ( ! module.active ) {
+	if ( ! this.isModuleActive( moduleId ) ) {
 		// Nothing to do
 		callback();
 		return;
 	}
 
-	this.toggleModule( module, callback );
+	this.toggleModule( moduleId, callback );
 };
 
-JetpackSite.prototype.toggleModule = function( module, callback ) {
-	var method;
+JetpackSite.prototype.toggleModule = function( moduleId, callback ) {
+	const isActive = this.isModuleActive( moduleId ),
+		method = isActive ? 'jetpackModulesDeactivate' : 'jetpackModulesActivate',
+		prevActiveModules = Object.assign( {}, this.modules );
 
-	if ( typeof module === 'string' ) {
-		module = this.getModule( module );
+	if ( isActive ) {
+		this.modules = this.modules.filter( module => module !== moduleId );
+	} else {
+		this.modules = [ ...this.modules, moduleId ];
 	}
-
-	method = module.active ? 'jetpackModulesDeactivate' : 'jetpackModulesActivate';
-
-	wpcom.undocumented()[ method ]( this.ID, module.id, function( error, data ) {
-		debug( 'module toggled', this.URL, module.id, data );
+	wpcom.undocumented()[ method ]( this.ID, moduleId, function( error, data ) {
+		debug( 'module toggled', this.URL, moduleId, data );
 
 		if ( error ) {
 			debug( 'error toggling module from api', error );
+			this.modules = prevActiveModules;
 			this.emit( 'change' );
-			callback && callback( error );
-			return;
 		}
-
-		module.active = ! module.active;
-		this.emit( 'change' );
-		callback && callback( null, data );
+		callback && callback( error, data );
 	}.bind( this ) );
 
 	this.emit( 'change' );
@@ -402,6 +358,36 @@ JetpackSite.prototype.updateSshCredentials = function( query, callback ) {
 		debug( 'updated SSH credentials', data );
 
 		callback && callback( null, data );
+	}.bind( this ) );
+
+	this.emit( 'change' );
+};
+
+JetpackSite.prototype.getOption = function( query, callback ) {
+	wpcom.undocumented().site( this.ID ).getOption( query, function( error, data ) {
+		this.emit( 'change' );
+
+		if ( error ) {
+			debug( 'error getting option', error );
+		}
+
+		callback && callback( error, data );
+	}.bind( this ) );
+
+	this.emit( 'change' );
+};
+
+JetpackSite.prototype.setOption = function( query, callback ) {
+	query.site_option = query.site_option || false;
+	query.is_array = query.is_array || false;
+	wpcom.undocumented().site( this.ID ).setOption( query, function( error, data ) {
+		this.emit( 'change' );
+
+		if ( error ) {
+			debug( 'error getting option', error );
+		}
+
+		callback && callback( error, data );
 	}.bind( this ) );
 
 	this.emit( 'change' );

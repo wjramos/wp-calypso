@@ -1,7 +1,8 @@
 /**
  * External dependencies
  */
-var React = require( 'react/addons' ),
+var React = require( 'react' ),
+	PureRenderMixin = require( 'react-pure-render/mixin' ),
 	classNames = require( 'classnames' ),
 	omit = require( 'lodash/object/omit' );
 
@@ -11,7 +12,9 @@ var React = require( 'react/addons' ),
 var Gravatar = require( 'components/gravatar' );
 
 module.exports = React.createClass( {
-	mixins: [ React.addons.PureRenderMixin ],
+	displayName: 'PeopleProfile',
+
+	mixins: [ PureRenderMixin ],
 
 	getRole: function() {
 		var user = this.props.user;

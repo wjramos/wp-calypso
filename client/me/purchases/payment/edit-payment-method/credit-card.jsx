@@ -2,7 +2,8 @@
  * External Dependencies
  */
 import React from 'react';
-
+import { connect } from 'react-redux';
+import { bindActionCreators } from 'redux';
 /**
  * Internal Dependencies
  */
@@ -10,8 +11,8 @@ import Button from 'components/button';
 import classNames from 'classnames';
 import Dialog from 'components/dialog';
 import FoldableCard from 'components/foldable-card';
-import notices from 'notices';
 import { getPurchase, goToEditCardDetails } from 'me/purchases/utils';
+import { successNotice } from 'state/notices/actions';
 
 const EditPaymentMethodCreditCard = React.createClass( {
 	propTypes: {
@@ -31,7 +32,7 @@ const EditPaymentMethodCreditCard = React.createClass( {
 		if ( action === 'delete' ) {
 			// TODO: Add action that calls the API and deletes the card
 
-			notices.success( this.translate( 'The credit card was deleted successfully.' ) );
+			this.props.successNotice( this.translate( 'The credit card was deleted successfully.' ) );
 		}
 	},
 
@@ -92,7 +93,7 @@ const EditPaymentMethodCreditCard = React.createClass( {
 				</strong>
 				<em>
 					{ this.translate( 'Expires %(date)s', {
-						args: { date: payment.creditCard.expiryDate },
+						args: { date: creditCard.expiryDate },
 						context: 'date is of the form MM/YY'
 					} ) }
 				</em>
@@ -136,4 +137,7 @@ const EditPaymentMethodCreditCard = React.createClass( {
 	}
 } );
 
-export default EditPaymentMethodCreditCard;
+export default connect(
+	null,
+	dispatch => bindActionCreators( { successNotice }, dispatch )
+)( EditPaymentMethodCreditCard );

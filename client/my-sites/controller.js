@@ -2,6 +2,7 @@
  * External Dependencies
  */
 var page = require( 'page' ),
+	ReactDom = require( 'react-dom' ),
 	React = require( 'react' );
 
 /**
@@ -10,6 +11,8 @@ var page = require( 'page' ),
 var user = require( 'lib/user' )(),
 	sites = require( 'lib/sites-list' )(),
 	layoutFocus = require( 'lib/layout-focus' ),
+	sitesActions = require( 'state/sites/actions' ),
+	uiActions = require( 'state/ui/actions' ),
 	NavigationComponent = require( 'my-sites/navigation' ),
 	route = require( 'lib/route' ),
 	i18n = require( 'lib/mixins/i18n' ),
@@ -24,13 +27,10 @@ var user = require( 'lib/user' )(),
  * the site selector list and the sidebar section items
  */
 function renderNavigation( context, allSitesPath, siteBasePath ) {
-	context.layout.setState( {
-		section: 'sites',
-		noSidebar: false
-	} );
+	context.store.dispatch( uiActions.setSection( 'sites' ) );
 
 	// Render the My Sites navigation in #secondary
-	React.render(
+	ReactDom.render(
 		React.createElement( NavigationComponent, {
 			layoutFocus: layoutFocus,
 			path: context.path,
@@ -46,9 +46,9 @@ function renderNavigation( context, allSitesPath, siteBasePath ) {
 function renderEmptySites() {
 	var NoSitesMessage = require( 'components/empty-content/no-sites-message' );
 
-	React.unmountComponentAtNode( document.getElementById( 'secondary' ) );
+	ReactDom.unmountComponentAtNode( document.getElementById( 'secondary' ) );
 
-	React.render(
+	ReactDom.render(
 		React.createElement( NoSitesMessage ),
 		document.getElementById( 'primary' )
 	);
@@ -59,9 +59,9 @@ function renderNoVisibleSites() {
 		currentUser = user.get(),
 		hiddenSites = currentUser.site_count - currentUser.visible_site_count;
 
-	React.unmountComponentAtNode( document.getElementById( 'secondary' ) );
+	ReactDom.unmountComponentAtNode( document.getElementById( 'secondary' ) );
 
-	React.render(
+	ReactDom.render(
 		React.createElement( EmptyContentComponent, {
 			title: i18n.translate( 'You have %(hidden)d hidden WordPress site.', 'You have %(hidden)d hidden WordPress sites.', {
 				count: hiddenSites,
@@ -127,12 +127,23 @@ module.exports = {
 		// If the path fragment does not resemble a site, set all sites to visible
 		if ( ! siteID ) {
 			sites.selectAll();
+			context.store.dispatch( uiActions.setAllSitesSelected() );
 			return next();
+		}
+
+		function onSelectedSiteAvailable() {
+			var selectedSite = sites.getSelectedSite();
+			siteStatsStickyTabActions.saveFilterAndSlug( false, selectedSite.slug );
+			context.store.dispatch( sitesActions.receiveSite( selectedSite ) );
+			context.store.dispatch( uiActions.setSelectedSiteId( selectedSite.ID ) );
+			sites.setRecentlySelectedSite( selectedSite.ID );
 		}
 
 		// If there's a valid site from the url path
 		// set site visibility to just that site on the picker
-		if ( ! sites.select( siteID ) ) {
+		if ( sites.select( siteID ) ) {
+			onSelectedSiteAvailable();
+		} else {
 			// if sites has fresh data and siteID is invalid
 			// redirect to allSitesPath
 			if ( sites.fetched || ! sites.fetching ) {
@@ -141,14 +152,12 @@ module.exports = {
 			// Otherwise, check when sites has loaded
 			sites.once( 'change', function() {
 				// if sites have loaded, but siteID is invalid, redirect to allSitesPath
-				if ( ! sites.select( siteID ) ) {
+				if ( sites.select( siteID ) ) {
+					onSelectedSiteAvailable();
+				} else {
 					page.redirect( allSitesPath );
 				}
-
-				siteStatsStickyTabActions.saveFilterAndSlug( false, sites.getSelectedSite().slug );
 			} );
-		} else {
-			siteStatsStickyTabActions.saveFilterAndSlug( false, sites.getSelectedSite().slug );
 		}
 
 		next();
@@ -195,7 +204,7 @@ module.exports = {
 			var site = sites.getSite( siteFragment );
 			if ( ! site ) {
 				sites.once( 'change', checkSiteShouldFetch );
-			} else if ( site.jetpack ) {
+			} else if ( site.jetpack && site.user_can_manage ) {
 				site.fetchSettings();
 			}
 		}
@@ -216,7 +225,7 @@ module.exports = {
 	},
 
 	removeOverlay: function( context, next ) {
-		React.unmountComponentAtNode( document.getElementById( 'tertiary' ) );
+		ReactDom.unmountComponentAtNode( document.getElementById( 'tertiary' ) );
 		next();
 	},
 
@@ -227,7 +236,7 @@ module.exports = {
 			selectedSite = sites.getSelectedSite();
 
 		if ( selectedSite && selectedSite.jetpack ) {
-			React.render( (
+			ReactDom.render( (
 				<Main>
 					<JetpackManageErrorPage template="noDomainsOnJetpack" site={ sites.getSelectedSite() }/>
 				</Main>
@@ -254,11 +263,10 @@ module.exports = {
 		 * Sites is rendered on #primary but it doesn't expect a sidebar to exist
 		 * so section needs to be set explicitly and #secondary cleaned up
 		 */
-		context.layout.setState( {
-			section: 'sites',
-			noSidebar: true
-		} );
-		React.unmountComponentAtNode( document.getElementById( 'secondary' ) );
+		context.store.dispatch( uiActions.setSection( 'sites', {
+			hasSidebar: false
+		} ) );
+		ReactDom.unmountComponentAtNode( document.getElementById( 'secondary' ) );
 		layoutFocus.set( 'content' );
 
 		// This path sets the URL to be visited once a site is selected
@@ -266,7 +274,7 @@ module.exports = {
 
 		analytics.pageView.record( basePath, analyticsPageTitle );
 
-		React.render(
+		ReactDom.render(
 			React.createElement( SitesComponent, {
 				sites: sites,
 				path: context.path,

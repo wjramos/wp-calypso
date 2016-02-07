@@ -25,7 +25,7 @@ module.exports = React.createClass( {
 	},
 
 	toggleAutoupdates: function() {
-		if ( this.props.isMock ) {
+		if ( this.props.isMock || this.props.disabled ) {
 			return;
 		}
 
@@ -74,8 +74,8 @@ module.exports = React.createClass( {
 			} );
 		}
 
-		if ( ! this.props.site.canUpdateFiles && this.props.site.options.file_mod_disabled ) {
-			let reasons = utils.getSiteFileModDisableReason( this.props.site );
+		if ( ! this.props.site.canAutoupdateFiles && this.props.site.options.file_mod_disabled ) {
+			let reasons = utils.getSiteFileModDisableReason( this.props.site, 'autoupdateFiles' );
 			let html = [];
 
 			if ( reasons.length > 1 ) {
@@ -131,6 +131,7 @@ module.exports = React.createClass( {
 
 		return (
 			<PluginAction
+				disabled={ this.props.disabled }
 				label={ label }
 				status={ this.props.plugin.autoupdate }
 				action={ this.toggleAutoupdates }

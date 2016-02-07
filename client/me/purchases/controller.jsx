@@ -1,6 +1,7 @@
 /**
  * External Dependencies
  */
+import ReactDom from 'react-dom';
 import React from 'react';
 
 /**
@@ -22,6 +23,7 @@ import ManagePurchase from './manage-purchase';
 import NoSitesMessage from 'components/empty-content/no-sites-message';
 import paths from './paths';
 import PurchasesData from 'components/data/purchases';
+import PurchasesHeader from './list/header';
 import PurchasesList from './list';
 import sitesFactory from 'lib/sites-list';
 import titleActions from 'lib/screen-title/actions';
@@ -44,7 +46,7 @@ function recordPageView( path, ...title ) {
 }
 
 function renderPage( component ) {
-	React.render(
+	ReactDom.render(
 		component,
 		document.getElementById( 'primary' )
 	);
@@ -213,6 +215,7 @@ export default {
 
 		renderPage(
 			<Main>
+				<PurchasesHeader section={ 'purchases' } />
 				<NoSitesMessage />
 			</Main>
 		);

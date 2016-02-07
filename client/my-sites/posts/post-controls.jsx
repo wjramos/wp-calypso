@@ -1,7 +1,8 @@
 /**
  * External dependencies
  */
-var React = require( 'react/addons' ),
+var React = require( 'react' ),
+	PureRenderMixin = require( 'react-pure-render/mixin' ),
 	url = require( 'url' );
 
 /**
@@ -15,7 +16,7 @@ var config = require( 'config' ),
 module.exports = React.createClass( {
 	displayName: 'PostControls',
 
-	mixins: [ React.addons.PureRenderMixin ],
+	mixins: [ PureRenderMixin ],
 
 	propTypes: {
 		post: React.PropTypes.object.isRequired,
@@ -151,8 +152,8 @@ module.exports = React.createClass( {
 		if ( utils.userCan( 'delete_post', post ) ) {
 			if ( post.status === 'trash') {
 				availableControls.push( {
-					text: this.translate( 'Delete' ),
-					className: 'post-controls__trash',
+					text: this.translate( 'Delete Permanently' ),
+					className: 'post-controls__trash is-scary',
 					onClick: this.props.onDelete,
 					icon: 'trash'
 				} );

@@ -1,7 +1,9 @@
 /**
  * External dependencies
  */
-import React, { PropTypes } from 'react/addons';
+import ReactDomServer from 'react-dom/server';
+import React, { PropTypes } from 'react';
+import createFragment from 'react-addons-create-fragment';
 import omit from 'lodash/object/omit';
 import isEqual from 'lodash/lang/isEqual';
 import classNames from 'classnames';
@@ -31,23 +33,26 @@ function buildFrameBody( { body, scripts, styles } = { body: '', scripts: {}, st
 	fragment.scripts = mapValues( scripts, ( script ) => {
 		let extra;
 		if ( script.extra ) {
+			/*eslint-disable react/no-danger*/
 			extra = (
 				<script dangerouslySetInnerHTML={ {
 					__html: script.extra
 				} } />
 			);
+			/*eslint-enable react/no-danger*/
 		}
 
-		return React.addons.createFragment( {
+		return createFragment( {
 			extra: extra,
 			script: <script src={ script.src } />
 		} );
 	} );
 
-	return React.renderToStaticMarkup(
+	/*eslint-disable react/no-danger*/
+	return ReactDomServer.renderToStaticMarkup(
 		<html>
 			<head>
-				{ React.addons.createFragment( fragment.styles ) }
+				{ createFragment( fragment.styles ) }
 				<style dangerouslySetInnerHTML={ { __html: 'a { cursor: default; }' } } />
 			</head>
 			<body style={ { margin: 0 } }>
@@ -62,10 +67,11 @@ function buildFrameBody( { body, scripts, styles } = { body: '', scripts: {}, st
 						}, true );
 					} );
 				` } } />
-				{ React.addons.createFragment( fragment.scripts ) }
+				{ createFragment( fragment.scripts ) }
 			</body>
 		</html>
 	);
+	/*eslint-enable react/no-danger*/
 }
 
 export default React.createClass( {

@@ -2,15 +2,14 @@
  * External dependencies
  */
 import React, { PropTypes } from 'react';
+import PureRenderMixin from 'react-pure-render/mixin';
 
 /**
  * Internal dependencies
  */
-import Checkbox from 'components/forms/form-checkbox';
+import FormRadio from 'components/forms/form-radio';
 import Select from 'components/forms/form-select';
 import Label from 'components/forms/form-label';
-
-const PureRenderMixin = React.addons.PureRenderMixin;
 
 /**
  * Displays a list of select menus with a checkbox legend
@@ -25,7 +24,7 @@ module.exports = React.createClass( {
 	mixins: [ PureRenderMixin ],
 
 	propTypes: {
-		onToggleEnabled: PropTypes.func,
+		onSelect: PropTypes.func,
 
 		legend: PropTypes.string.isRequired,
 		isEnabled: PropTypes.bool.isRequired
@@ -42,9 +41,9 @@ module.exports = React.createClass( {
 			<div className="exporter__option-fieldset">
 
 				<Label className="exporter__option-fieldset-legend">
-					<Checkbox
+					<FormRadio
 						checked={ this.props.isEnabled }
-						onChange={ this.props.onToggleEnabled }/>
+						onChange={ this.props.onSelect }/>
 					<span className="exporter__option-fieldset-legend-text">{ this.props.legend }</span>
 				</Label>
 

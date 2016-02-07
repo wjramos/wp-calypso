@@ -1,7 +1,8 @@
 /**
  * Exeternal Dependencies
  */
-var React = require( 'react/addons' ),
+var React = require( 'react' ),
+	PureRenderMixin = require( 'react-pure-render/mixin' ),
 	classnames = require( 'classnames' );
 
 /**
@@ -11,7 +12,7 @@ var LikeIcons = require( './icons' );
 
 var LikeButton = React.createClass( {
 
-	mixins: [ React.addons.PureRenderMixin ],
+	mixins: [ PureRenderMixin ],
 
 	propTypes: {
 		liked: React.PropTypes.bool,
@@ -68,8 +69,7 @@ var LikeButton = React.createClass( {
 
 		// Override the label with a counter
 		if ( likeCount > 0 || this.props.showCount ) {
-			likeLabel = this.translate( '%d Like', '%d Likes', {
-				args: [ likeCount ],
+			likeLabel = this.translate( 'Like', 'Likes', {
 				count: likeCount,
 				comment: 'Displayed when a person "likes" a post.'
 			} );
@@ -81,7 +81,10 @@ var LikeButton = React.createClass( {
 
 		containerClasses = classnames( containerClasses );
 
-		labelElement = ( <span className="like-button__label">{ likeLabel }</span> );
+		labelElement = ( <span className="like-button__label">
+			{ likeCount > 0 ? <span className="like-button__label-count">{ likeCount }</span> : null }
+			<span className="like-button__label-status">{ likeLabel }</span>
+		</span> );
 
 		return (
 		React.createElement(

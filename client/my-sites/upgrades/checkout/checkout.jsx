@@ -1,8 +1,10 @@
 /**
  * External dependencies
  */
-var isEqual = require( 'lodash/lang/isEqual' ),
+var connect = require( 'react-redux' ).connect,
+	Dispatcher = require( 'dispatcher' ),
 	isEmpty = require( 'lodash/lang/isEmpty' ),
+	isEqual = require( 'lodash/lang/isEqual' ),
 	page = require( 'page' ),
 	React = require( 'react' );
 
@@ -11,20 +13,25 @@ var isEqual = require( 'lodash/lang/isEqual' ),
  */
 var analytics = require( 'analytics' ),
 	cartItems = require( 'lib/cart-values' ).cartItems,
+	clearPurchases = require( 'lib/upgrades/actions/purchases' ).clearPurchases,
 	DomainDetailsForm = require( './domain-details-form' ),
 	hasDomainDetails = require( 'lib/store-transactions' ).hasDomainDetails,
 	observe = require( 'lib/mixins/data-observe' ),
+	clearSitePlans = require( 'state/sites/plans/actions' ).clearSitePlans,
 	purchasePaths = require( 'me/purchases/paths' ),
 	SecurePaymentForm = require( './secure-payment-form' ),
+	getExitCheckoutUrl = require( 'lib/checkout' ).getExitCheckoutUrl,
 	upgradesActions = require( 'lib/upgrades/actions' );
 
-module.exports = React.createClass( {
-	displayName: 'Checkout',
-
+const Checkout = React.createClass( {
 	mixins: [ observe( 'sites', 'cards', 'productsList' ) ],
 
 	getInitialState: function() {
 		return { previousCart: null };
+	},
+
+	componentWillMount: function() {
+		upgradesActions.resetTransaction();
 	},
 
 	componentDidMount: function() {
@@ -34,17 +41,23 @@ module.exports = React.createClass( {
 
 		if ( this.props.cart.hasLoadedFromServer ) {
 			this.trackPageView();
+
+			if ( this.props.planName ) {
+				this.addPlanToCart();
+			}
 		}
 
 		window.scrollTo( 0, 0 );
-
-		upgradesActions.resetTransaction();
 	},
 
 	componentWillReceiveProps: function( nextProps ) {
 		if ( ! this.props.cart.hasLoadedFromServer && nextProps.cart.hasLoadedFromServer ) {
 			// if the cart hadn't loaded when this mounted, record the page view when it loads
 			this.trackPageView( nextProps );
+
+			if ( this.props.planName ) {
+				this.addPlanToCart();
+			}
 		}
 	},
 
@@ -72,9 +85,21 @@ module.exports = React.createClass( {
 		} );
 	},
 
+	addPlanToCart: function() {
+		var planSlug = this.props.plans.getSlugFromPath( this.props.planName ),
+			planItem = cartItems.getItemForPlan( { product_slug: planSlug }, { isFreeTrial: false } );
+
+		upgradesActions.addItem( planItem );
+	},
+
 	redirectIfEmptyCart: function() {
 		var redirectTo = '/plans/',
 			renewalItem;
+
+		if ( ! this.state.previousCart && this.props.planName ) {
+			// the plan hasn't been added to the cart yet
+			return false;
+		}
 
 		if ( ! this.props.cart.hasLoadedFromServer || ! isEmpty( cartItems.getAll( this.props.cart ) ) ) {
 			return false;
@@ -85,32 +110,27 @@ module.exports = React.createClass( {
 		}
 
 		if ( this.state.previousCart ) {
-			if ( cartItems.hasDomainRegistration( this.state.previousCart ) ) {
-				redirectTo = '/domains/add/';
-			} else if ( cartItems.hasDomainMapping( this.state.previousCart ) ) {
-				redirectTo = '/domains/add/mapping/';
-			} else if ( cartItems.hasProduct( this.state.previousCart, 'offsite_redirect' ) ) {
-				redirectTo = '/domains/add/site-redirect/';
-			} else if ( cartItems.hasProduct( this.state.previousCart, 'premium_theme' ) ) {
-				redirectTo = '/design/';
-			}
-			redirectTo = redirectTo + this.props.sites.getSelectedSite().slug;
-
-			if ( cartItems.hasRenewalItem( this.state.previousCart ) ) {
-				renewalItem = cartItems.getRenewalItems( this.state.previousCart )[ 0 ];
-				redirectTo = purchasePaths.managePurchase( renewalItem.extra.purchaseDomain, renewalItem.extra.purchaseId );
-			}
+			redirectTo = getExitCheckoutUrl( this.state.previousCart, this.props.sites.getSelectedSite().slug );
 		}
 
 		page.redirect( redirectTo );
+
 		return true;
 	},
 
 	getCheckoutCompleteRedirectPath: function() {
 		var renewalItem;
+
 		if ( cartItems.hasRenewalItem( this.props.cart ) ) {
+			clearPurchases();
+
 			renewalItem = cartItems.getRenewalItems( this.props.cart )[ 0 ];
+
 			return purchasePaths.managePurchaseDestination( renewalItem.extra.purchaseDomain, renewalItem.extra.purchaseId, 'thank-you' );
+		} else if ( cartItems.hasFreeTrial( this.props.cart ) ) {
+			this.props.clearSitePlans( this.props.sites.getSelectedSite().ID );
+
+			return `/plans/${ this.props.sites.getSelectedSite().slug }/thank-you`;
 		}
 
 		return '/checkout/thank-you';
@@ -140,7 +160,7 @@ module.exports = React.createClass( {
 				cards={ this.props.cards }
 				products={ this.props.productsList.get() }
 				selectedSite={ selectedSite }
-				redirectTo={ this.getCheckoutCompleteRedirectPath() } />
+				redirectTo={ this.getCheckoutCompleteRedirectPath } />
 		);
 	},
 
@@ -172,3 +192,14 @@ module.exports = React.createClass( {
 		);
 	}
 } );
+
+module.exports = connect(
+	undefined,
+	function( dispatch ) {
+		return {
+			clearSitePlans: function( siteId ) {
+				dispatch( clearSitePlans( siteId ) );
+			}
+		};
+	}
+)( Checkout );

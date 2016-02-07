@@ -1,10 +1,12 @@
 /**
  * External dependencies
  */
-var React = require( 'react' ),
+var ReactDom = require( 'react-dom' ),
+	React = require( 'react' ),
 	qs = require( 'qs' ),
 	debounce = require( 'lodash/function/debounce' ),
 	page = require( 'page' ),
+	setSection = require( 'state/ui/actions' ).setSection,
 	EmptyContent = require( 'components/empty-content' );
 
 /**
@@ -13,6 +15,7 @@ var React = require( 'react' ),
 var DocsComponent = require( './main' ),
 	SingleDocComponent = require( './doc' ),
 	DesignAssetsComponent = require( './design' ),
+	AppComponents = require( './design/app-components' ),
 	Typography = require( './design/typography' ),
 	DevWelcome = require( './welcome' ),
 	Sidebar = require( './sidebar' ),
@@ -25,7 +28,7 @@ var devdocs = {
 	 * so #secondary needs to be cleaned up
 	 */
 	sidebar: function( context, next ) {
-		React.render(
+		ReactDom.render(
 			React.createElement( Sidebar, {} ),
 			document.getElementById( 'secondary' )
 		);
@@ -38,7 +41,7 @@ var devdocs = {
 	 */
 	devdocs: function( context ) {
 		function onSearchChange( searchTerm ) {
-			var query = qs.parse( context.querystring );
+			var query = context.query;
 			if ( searchTerm ) {
 				query.term = searchTerm;
 			} else {
@@ -51,12 +54,9 @@ var devdocs = {
 				false );
 		}
 
-		context.layout.setState( {
-			section: 'devdocs',
-			noSidebar: false
-		} );
+		context.store.dispatch( setSection( 'devdocs' ) );
 
-		React.render(
+		ReactDom.render(
 			React.createElement( DocsComponent, {
 				term: context.query.term,
 				// we debounce with wait time of 0, so that the search doesn’t happen
@@ -71,12 +71,9 @@ var devdocs = {
 	 * Controller for single developer document
 	 */
 	singleDoc: function( context ) {
-		context.layout.setState( {
-			section: 'devdocs',
-			noSidebar: false
-		} );
+		context.store.dispatch( setSection( 'devdocs' ) );
 
-		React.render(
+		ReactDom.render(
 			React.createElement( SingleDocComponent, {
 				path: context.params.path,
 				term: context.query.term,
@@ -88,12 +85,9 @@ var devdocs = {
 
 	// UI components
 	design: function( context ) {
-		context.layout.setState( {
-			section: 'devdocs',
-			noSidebar: false
-		} );
+		context.store.dispatch( setSection( 'devdocs' ) );
 
-		React.render(
+		ReactDom.render(
 			React.createElement( DesignAssetsComponent, {
 				component: context.params.component
 			} ),
@@ -101,13 +95,22 @@ var devdocs = {
 		);
 	},
 
-	typography: function( context ) {
-		context.layout.setState( {
-			section: 'devdocs',
-			noSidebar: false
-		} );
+	// App components
+	appComponents: function( context ) {
+		context.store.dispatch( setSection( 'devdocs' ) );
 
-		React.render(
+		ReactDom.render(
+			React.createElement( AppComponents, {
+				component: context.params.component
+			} ),
+			document.getElementById( 'primary' )
+		);
+	},
+
+	typography: function( context ) {
+		context.store.dispatch( setSection( 'devdocs' ) );
+
+		ReactDom.render(
 			React.createElement( Typography, {
 				component: context.params.component
 			} ),
@@ -116,7 +119,7 @@ var devdocs = {
 	},
 
 	formStateExamples: function( context ) {
-		React.render(
+		ReactDom.render(
 			React.createElement( FormStateExamplesComponent, {
 				component: context.params.component
 			} ),
@@ -125,14 +128,13 @@ var devdocs = {
 	},
 
 	pleaseLogIn: function( context ) {
-		context.layout.setState( {
-			section: 'devdocs-start',
-			noSidebar: true
-		} );
+		context.store.dispatch( setSection( 'devdocs-start', {
+			hasSidebar: false
+		} ) );
 
-		React.unmountComponentAtNode( document.getElementById( 'secondary' ) );
+		ReactDom.unmountComponentAtNode( document.getElementById( 'secondary' ) );
 
-		React.render(
+		ReactDom.render(
 			React.createElement( EmptyContent, {
 				title: 'Log In to start hacking',
 				line: 'Required to access the WordPress.com API',
@@ -148,12 +150,9 @@ var devdocs = {
 
 	// Welcome screen
 	welcome: function( context ) {
-		context.layout.setState( {
-			section: 'devdocs',
-			noSidebar: false
-		} );
+		context.store.dispatch( setSection( 'devdocs' ) );
 
-		React.render(
+		ReactDom.render(
 			React.createElement( DevWelcome, {} ),
 			document.getElementById( 'primary' )
 		);

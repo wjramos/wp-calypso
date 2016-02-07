@@ -1,7 +1,8 @@
 /**
 * External dependencies
 */
-var React = require( 'react' );
+var React = require( 'react' ),
+	PureRenderMixin = require( 'react-pure-render/mixin' );
 
 /**
  * Internal dependencies
@@ -12,13 +13,13 @@ var FollowButton = require( 'components/follow-button/button' ),
 var FollowButtons = React.createClass( {
 	displayName: 'FollowButtons',
 
-	mixins: [ React.addons.PureRenderMixin ],
+	mixins: [ PureRenderMixin ],
 
 	render: function() {
 		return (
 			<div className="design-assets__group">
 				<h2>
-					<a href="/devdocs/design/follow-buttons">Follow Button</a>
+					<a href="/devdocs/app-component/follow-buttons">Follow Button</a>
 				</h2>
 				<Card>
 					<span>Default:</span>

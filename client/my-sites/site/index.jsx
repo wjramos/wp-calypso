@@ -2,7 +2,6 @@
  * External dependencies
  */
 var React = require( 'react' ),
-	debug = require( 'debug' )( 'calypso:my-sites:site' ),
 	classNames = require( 'classnames' ),
 	noop = require( 'lodash/utility/noop' );
 
@@ -10,19 +9,17 @@ var React = require( 'react' ),
  * Internal dependencies
  */
 var SiteIcon = require( 'components/site-icon' ),
+	Gridicon = require( 'components/gridicon' ),
 	SiteIndicator = require( 'my-sites/site-indicator' );
 
 module.exports = React.createClass( {
 	displayName: 'Site',
 
-	componentDidMount: function() {
-		debug( 'The Site component is mounted.' );
-	},
-
 	getDefaultProps: function() {
 		return {
 			// onSelect callback
 			onSelect: noop,
+			onClick: noop,
 			// mouse event callbacks
 			onMouseEnter: noop,
 			onMouseLeave: noop,
@@ -34,7 +31,9 @@ module.exports = React.createClass( {
 			indicator: true,
 
 			// Mark as selected or not
-			isSelected: false
+			isSelected: false,
+
+			homeLink: false
 		};
 	},
 
@@ -46,20 +45,30 @@ module.exports = React.createClass( {
 		onMouseEnter: React.PropTypes.func,
 		onMouseLeave: React.PropTypes.func,
 		isSelected: React.PropTypes.bool,
-		site: React.PropTypes.object.isRequired
+		site: React.PropTypes.object.isRequired,
+		onClick: React.PropTypes.func
 	},
 
 	onSelect: function( event ) {
+		if ( this.props.homeLink ) {
+			return;
+		}
+
 		this.props.onSelect( event );
-		event.preventDefault();
+		event.preventDefault(); // this doesn't actually do anything...
 	},
 
 	render: function() {
 		var site = this.props.site,
 			siteClass;
 
+		if ( ! site ) {
+			// we could move the placeholder state here
+			return null;
+		}
+
 		siteClass = classNames( {
-			'site': true,
+			site: true,
 			'is-jetpack': site.jetpack,
 			'is-primary': site.primary,
 			'is-private': site.is_private,
@@ -70,20 +79,37 @@ module.exports = React.createClass( {
 		return (
 			<div className={ siteClass }>
 				<a className="site__content"
-					href={ this.props.href }
+					href={ this.props.homeLink ? site.URL : this.props.href }
 					target={ this.props.externalLink && '_blank' }
+					title={ this.props.homeLink
+						? this.translate( 'Visit "%(title)s"', { args: { title: site.title } } )
+						: site.title
+					}
 					onTouchTap={ this.onSelect }
+					onClick={ this.props.onClick }
 					onMouseEnter={ this.props.onMouseEnter }
 					onMouseLeave={ this.props.onMouseLeave }
-					aria-label={ this.translate( 'Open site %(domain)s in new tab', { args: { domain: site.domain } } ) }
+					aria-label={
+						this.translate( 'Open site %(domain)s in new tab', {
+							args: { domain: site.domain }
+						} )
+					}
 				>
 					<SiteIcon site={ site } />
 					<div className="site__info">
 						<div className="site__title">{ site.title }</div>
 						<div className="site__domain">{ site.domain }</div>
 					</div>
+					{ this.props.homeLink &&
+						<span className="site__home">
+							<Gridicon icon="house" size={ 12 } />
+						</span>
+					}
 				</a>
-				{ this.props.indicator ? <SiteIndicator site={ site } /> : null }
+				{ this.props.indicator
+					? <SiteIndicator site={ site } onSelect={ this.props.onSelect } />
+					: null
+				}
 			</div>
 		);
 	}

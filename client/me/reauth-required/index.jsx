@@ -2,6 +2,7 @@
  * External dependencies
  */
 var React = require( 'react' ),
+	LinkedStateMixin = require( 'react-addons-linked-state-mixin' ),
 	debug = require( 'debug' )( 'calypso:me:reauth-required' );
 
 /**
@@ -18,13 +19,14 @@ var Dialog = require( 'components/dialog' ),
 	observe = require( 'lib/mixins/data-observe' ),
 	Notice = require( 'components/notice' ),
 	eventRecorder = require( 'me/event-recorder' ),
-	userUtilities = require( 'lib/user/utils' );
+	userUtilities = require( 'lib/user/utils' ),
+	constants = require( 'me/constants' );
 
 module.exports = React.createClass( {
 
 	displayName: 'ReauthRequired',
 
-	mixins: [ React.addons.LinkedStateMixin, observe( 'twoStepAuthorization' ), eventRecorder ],
+	mixins: [ LinkedStateMixin, observe( 'twoStepAuthorization' ), eventRecorder ],
 
 	getInitialState: function() {
 		return {
@@ -142,7 +144,6 @@ module.exports = React.createClass( {
 		return (
 			<div className="reauth-required__send-sms-throttled">
 				<Notice
-					isCompact={ true }
 					showDismiss={ false }
 					text={ this.translate(
 						'SMS codes are limited to once per minute. Please wait and try again.'
@@ -152,17 +153,9 @@ module.exports = React.createClass( {
 	},
 
 	render: function() {
-		var codePlaceholder = this.translate( 'e.g. 123456', {
-			context: '6 digit two factor code placeholder.',
-			textOnly: true
-		} );
-
-		if ( this.props.twoStepAuthorization.isTwoStepSMSEnabled() ) {
-			codePlaceholder = this.translate( 'e.g. 1234567', {
-				context: '7 digit two factor code placeholder.',
-				textOnly: true
-			} );
-		}
+		var codePlaceholder = this.props.twoStepAuthorization.isTwoStepSMSEnabled()
+			? constants.sevenDigit2faPlaceholder
+			: constants.sixDigit2faPlaceholder;
 
 		return (
 			<Dialog

@@ -11,20 +11,10 @@ $sites-popover-width: 300px;
 .sites-popover .tip-inner {
 	position: relative;
 	text-align: left;
+	overflow: hidden;
 }
 
 .sites-popover .site-selector {
-	overflow: visible;
-	position: static;
-		top: auto;
-		left: auto;
-		bottom: auto;
-	width: auto;
-	opacity: 1;
-	pointer-events: auto;
-	border: none;
-	background: transparent;
-
 	&.is-large {
 		padding-top: 50px;
 	}
@@ -48,18 +38,18 @@ $sites-popover-width: 300px;
 
 .sites-popover .site-selector .site {
 	&.is-selected {
-		background: $white;
+		background-color: $gray;
 
 		.site__title {
-			color: $gray-dark;
+			color: $white;
 
 			&::before {
-				color: $gray;
+				color: $white;
 			}
 		}
 
 		.site__domain {
-			color: $gray;
+			color: $white;
 		}
 	}
 
@@ -75,11 +65,6 @@ $sites-popover-width: 300px;
 			.site__title:before {
 				color: white;
 			}
-		}
-
-		&:last-child {
-			border-bottom-right-radius: 2px;
-			border-bottom-left-radius: 2px;
 		}
 	}
 }

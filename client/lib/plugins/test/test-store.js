@@ -247,101 +247,6 @@ describe( 'Plugins Store', function() {
 		} );
 	} );
 
-	describe( 'Toggle Plugin Selection', function() {
-		describe( 'Select Plugin', function() {
-			before( function() {
-				Dispatcher.handleServerAction( actions.togglePluginSelection );
-			} );
-
-			it( 'should return a plugin selected', function() {
-				var HelloDolly = PluginsStore.getPlugin( [ site ], 'hello-dolly' );
-				assert.isTrue( HelloDolly.selected );
-			} );
-
-			it( 'getPlugins should return a unselected plugin', function() {
-				var Plugins = PluginsStore.getPlugins( [ site ] );
-				assert.isTrue( Plugins[ 2 ].selected );
-			} );
-		} );
-
-		describe( 'Deselect Plugin', function() {
-			before( function() {
-				Dispatcher.handleServerAction( actions.togglePluginSelection );
-			} );
-
-			it( 'getPlugin should return a un selected plugin', function() {
-				var HelloDolly = PluginsStore.getPlugin( [ site ], 'hello-dolly' );
-				assert.isUndefined( HelloDolly.selected );
-			} );
-
-			it( 'getPlugins should return a unselected plugin', function() {
-				var Plugins = PluginsStore.getPlugins( [ site ] );
-				assert.isUndefined( Plugins[ 2 ].selected );
-			} );
-		} );
-	} );
-
-	describe( 'Plugin Selection', function() {
-		describe( 'Select All Plugins', function() {
-			before( function() {
-				Dispatcher.handleServerAction( actions.selectPluginsAll );
-			} );
-
-			it( 'getPlugin should return a plugin selected', function() {
-				var HelloDolly = PluginsStore.getPlugin( [ site ], 'hello-dolly' );
-				assert.isTrue( HelloDolly.selected );
-			} );
-
-			it( 'getPlugins should return only selected plugin', function() {
-				var Plugins = PluginsStore.getPlugins( [ site ] );
-				Plugins.forEach( function( plugin ) {
-					assert.isTrue( plugin.selected );
-				} );
-			} );
-		} );
-
-		describe( 'Select No Plugins', function() {
-			before( function() {
-				Dispatcher.handleServerAction( actions.selectPluginsNone );
-			} );
-
-			it( 'getPlugin should return a selected plugin', function() {
-				var HelloDolly = PluginsStore.getPlugin( [ site ], 'hello-dolly' );
-				assert.isUndefined( HelloDolly.selected );
-				assert.isUndefined( HelloDolly.selected );
-			} );
-
-			it( 'getPlugins should return a unselected plugin', function() {
-				var Plugins = PluginsStore.getPlugins( [ site ] );
-				Plugins.forEach( function( plugin ) {
-					assert.isUndefined( plugin.selected );
-				} );
-			} );
-		} );
-
-		describe( 'Select Need Updates Plugins', function() {
-			before( function() {
-				Dispatcher.handleServerAction( actions.selectPluginsNeedUpdate );
-			} );
-
-			it( 'getPlugin should return a un selected plugin', function() {
-				var HelloDolly = PluginsStore.getPlugin( [ site ], 'hello-dolly' );
-				assert.isTrue( HelloDolly.selected );
-			} );
-
-			it( 'getPlugins should return a selected plugin that need update', function() {
-				var Plugins = PluginsStore.getPlugins( [ site ] );
-				Plugins.forEach( function( plugin ) {
-					if ( plugin.update ) {
-						assert.isTrue( plugin.selected );
-					} else {
-						assert.isUndefined( plugin.selected );
-					}
-				} );
-			} );
-		} );
-	} );
-
 	describe( 'Remove Plugin', function() {
 		var Plugins;
 
@@ -367,14 +272,14 @@ describe( 'Plugins Store', function() {
 	describe( 'Update Plugin', function() {
 		var HelloDolly = {};
 
-		describe( 'Updateing Plugin', function() {
+		describe( 'Updating Plugin', function() {
 			beforeEach( function() {
 				Dispatcher.handleViewAction( actions.updatePlugin );
 				HelloDolly = PluginsStore.getSitePlugin( site, 'hello-dolly' );
 			} );
 
-			it( 'update = null', function() {
-				assert.isNull( HelloDolly.update );
+			it( 'doesn\'t remove update when lauched', function() {
+				assert.isNotNull( HelloDolly.update );
 			} );
 		} );
 
@@ -384,8 +289,8 @@ describe( 'Plugins Store', function() {
 				HelloDolly = PluginsStore.getSitePlugin( site, 'hello-dolly' );
 			} );
 
-			it( 'should set update = null', function() {
-				assert.isNull( HelloDolly.update );
+			it( 'should set lastUpdated', function() {
+				assert.isNotNull( HelloDolly.update.lastUpdated );
 			} );
 
 			it( 'should update the plugin data', function() {
@@ -394,6 +299,17 @@ describe( 'Plugins Store', function() {
 				assert.equal( HelloDolly.description, updatePluginData.description );
 				assert.equal( HelloDolly.author_url, updatePluginData.author_url );
 				assert.equal( HelloDolly.name, updatePluginData.name );
+			} );
+		} );
+
+		describe( 'Remove Plugin Update Info', function() {
+			beforeEach( function() {
+				Dispatcher.handleViewAction( actions.clearPluginUpdate );
+				HelloDolly = PluginsStore.getSitePlugin( site, 'hello-dolly' );
+			} );
+
+			it( 'should remove lastUpdated', function() {
+				assert.isNull( HelloDolly.update );
 			} );
 		} );
 

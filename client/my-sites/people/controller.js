@@ -1,6 +1,7 @@
 /**
  * External Dependencies
  */
+import ReactDom from 'react-dom';
 import React from 'react';
 import page from 'page';
 import route from 'lib/route';
@@ -12,7 +13,6 @@ import i18n from 'lib/mixins/i18n';
 import sitesList from 'lib/sites-list';
 import PeopleList from './main';
 import EditTeamMember from './edit-team-member-form';
-import qs from 'querystring';
 import layoutFocus from 'lib/layout-focus';
 import analytics from 'analytics';
 import titlecase from 'to-title-case';
@@ -20,6 +20,7 @@ import UsersStore from 'lib/users/store';
 import UsersActions from 'lib/users/actions';
 import PeopleLogStore from 'lib/people/log-store';
 import titleActions from 'lib/screen-title/actions';
+import InvitePeople from './invite-people';
 
 /**
  * Module variables
@@ -47,6 +48,10 @@ export default {
 		renderPeopleList( filter, context );
 	},
 
+	invitePeople( context ) {
+		renderInvitePeople( context );
+	},
+
 	person( context ) {
 		renderSingleTeamMember( context );
 	}
@@ -55,16 +60,31 @@ export default {
 function renderPeopleList( filter, context ) {
 	titleActions.setTitle( i18n.translate( 'People', { textOnly: true } ), { siteID: route.getSiteFragment( context.path ) } );
 
-	React.render(
+	ReactDom.render(
 		React.createElement( PeopleList, {
 			sites: sites,
 			peopleLog: PeopleLogStore,
 			filter: filter,
-			search: qs.parse( context.querystring ).s
+			search: context.query.s
 		} ),
 		document.getElementById( 'primary' )
 	);
 	analytics.pageView.record( 'people/' + filter + '/:site', 'People > ' + titlecase( filter ) );
+}
+
+function renderInvitePeople( context ) {
+	if ( ! sites.initialized ) {
+		sites.once( 'change', () => page( context.path ) );
+	}
+
+	titleActions.setTitle( i18n.translate( 'Invite People', { textOnly: true } ), { siteID: route.getSiteFragment( context.path ) } );
+
+	ReactDom.render(
+		React.createElement( InvitePeople, {
+			site: sites.getSelectedSite()
+		} ),
+		document.getElementById( 'primary' )
+	);
 }
 
 function renderSingleTeamMember( context ) {
@@ -101,7 +121,7 @@ function renderSingleTeamMember( context ) {
 		}
 	}
 
-	React.render(
+	ReactDom.render(
 		React.createElement( EditTeamMember, {
 			siteSlug: site && site.slug ? site.slug : undefined,
 			siteId: site && site.ID ? site.ID : undefined,

@@ -5,6 +5,7 @@ var debug = require( 'debug' )( 'calypso:sites-list' ),
 	store = require( 'store' ),
 	assign = require( 'lodash/object/assign' ),
 	find = require( 'lodash/collection/find' ),
+	isEmpty = require( 'lodash/lang/isEmpty' ),
 	some = require( 'lodash/collection/some' );
 
 /**
@@ -16,6 +17,9 @@ var wpcom = require( 'lib/wp' ),
 	Searchable = require( 'lib/mixins/searchable' ),
 	Emitter = require( 'lib/mixins/emitter' ),
 	isBusiness = require( 'lib/products-values' ).isBusiness,
+	isPlan = require( 'lib/products-values' ).isPlan,
+	PreferencesActions = require( 'lib/preferences/actions' ),
+	PreferencesStore = require( 'lib/preferences/store' ),
 	user = require( 'lib/user' )();
 
 /**
@@ -82,34 +86,34 @@ SitesList.prototype.fetch = function() {
 	this.fetching = true;
 	debug( 'getting SitesList from api' );
 	wpcom.me().sites( { site_visibility: siteVisiblity }, function( error, data ) {
-		var sites, changed;
-
 		if ( error ) {
 			debug( 'error fetching SitesList from api', error );
 			this.fetching = false;
 			return;
 		}
-
-		debug( 'SitesList fetched from api:', data.sites );
-
-		sites = this.parse( data );
-
-		if ( ! this.initialized ) {
-			this.initialize( sites );
-			this.fetched = true;
-			this.emit( 'change' );
-		} else {
-			changed = this.transaction( this.update, sites );
-			if ( changed || ! this.fetched ) {
-				this.fetched = true;
-				debug( 'SitesList changed via update' );
-				this.emit( 'change' );
-			}
-		}
+		this.sync( data );
 		this.fetching = false;
-		store.set( 'SitesList', sites );
 	}.bind( this ) );
 };
+
+SitesList.prototype.sync = function( data ) {
+	debug( 'SitesList fetched from api:', data.sites );
+
+	let sites = this.parse( data );
+	if ( ! this.initialized ) {
+		this.initialize( sites );
+		this.fetched = true;
+		this.emit( 'change' );
+	} else {
+		let changed = this.transaction( this.update, sites );
+		if ( changed || ! this.fetched ) {
+			this.fetched = true;
+			debug( 'SitesList changed via update' );
+			this.emit( 'change' );
+		}
+	}
+	store.set( 'SitesList', sites );
+}
 
 /**
  * Initialize data with Site objects
@@ -228,6 +232,27 @@ SitesList.prototype.update = function( sites ) {
 };
 
 /**
+ * Updates the `plan` property of existing sites.
+ *
+ * @param {array} purchases - Array of purchases indexed by site IDs
+ */
+SitesList.prototype.updatePlans = function( purchases ) {
+	this.data = this.data.map( function( site ) {
+		var plan;
+
+		if ( purchases[ site.ID ] ) {
+			plan = find( purchases[ site.ID ], isPlan );
+
+			if ( plan ) {
+				site.set( { plan: plan } );
+			}
+		}
+
+		return site;
+	} );
+};
+
+/**
  * Suppress the propagation of events from models while performing
  * an operation.
  *
@@ -339,7 +364,7 @@ SitesList.prototype.resetSelectedSite = function() {
 /**
  * Set selected site
  *
- * @param {number} Site ID to update visibility state
+ * @param {number} Site ID
  * @api private
  */
 SitesList.prototype.setSelectedSite = function( siteID ) {
@@ -358,6 +383,57 @@ SitesList.prototype.setSelectedSite = function( siteID ) {
  */
 SitesList.prototype.isSelected = function( site ) {
 	return this.selected === site.slug;
+};
+
+/**
+ * Set recently selected site
+ *
+ * @param {number} Site ID
+ * @api private
+ */
+SitesList.prototype.setRecentlySelectedSite = function( siteID ) {
+	if ( ! this.recentlySelected ) {
+		this.recentlySelected = PreferencesStore.get( 'recentSites' ) || [];
+	}
+
+	if ( ! siteID || ! this.initialized ) {
+		return;
+	}
+
+	// do not add duplicates
+	if ( this.recentlySelected.indexOf( siteID ) === -1 ) {
+		this.recentlySelected.unshift( siteID );
+	} else {
+		this.recentlySelected.splice( this.recentlySelected.indexOf( siteID ), 1 );
+		this.recentlySelected.unshift( siteID );
+	}
+
+	if ( this.recentlySelected.length > 3 ) {
+		this.recentlySelected.pop();
+	}
+
+	PreferencesActions.set( 'recentSites', this.recentlySelected );
+
+	this.emit( 'change' );
+};
+
+SitesList.prototype.getRecentlySelected = function() {
+	this.recentlySelected = PreferencesStore.get( 'recentSites' ) || [];
+
+	if ( ! this.recentlySelected.length || ! this.initialized ) {
+		return false;
+	}
+
+	let sites = [];
+
+	this.recentlySelected.forEach( function( id, index ) {
+		sites[ index ] = this.get().filter( function( site ) {
+			return id === site.ID;
+		}, this )[0];
+	}, this );
+
+	// remove undefined sites
+	return sites.filter( site => site );
 };
 
 /**
@@ -448,6 +524,17 @@ SitesList.prototype.getVisible = function() {
 	}, this );
 };
 
+/**
+ * Get sites that are marked as visible and not recently selected
+ *
+ * @api public
+ **/
+SitesList.prototype.getVisibleAndNotRecent = function() {
+	return this.get().filter( function( site ) {
+		return site.visible === true && this.recentlySelected.indexOf( site.ID ) === -1;
+	}, this );
+};
+
 SitesList.prototype.getUpgradeable = function() {
 	return this.get().filter( function( site ) {
 		return site.isUpgradeable();
@@ -459,22 +546,21 @@ SitesList.prototype.getSelectedOrAllJetpackCanManage = function() {
 		return site.jetpack &&
 			site.capabilities &&
 			site.capabilities.manage_options &&
-			( ! site.modules || site.canManage() );
+			site.canManage();
 	} );
 };
 
 SitesList.prototype.getSelectedOrAllWithPlugins = function() {
-	return this.getSelectedOrAll().concat(
-		this.getSelectedOrAll().filter( function( site ) {
-			return isBusiness( site.plan );
-		} )
-	);
+	return this.getSelectedOrAll().filter( site => {
+		return site.capabilities &&
+			site.capabilities.manage_options &&
+			( isBusiness( site.plan ) || site.jetpack ) &&
+			( site.visible || this.selected )
+	} );
 };
 
 SitesList.prototype.hasSiteWithPlugins = function() {
-	return some( this.get(), function( site ) {
-		return isBusiness( site.plan ) || site.jetpack;
-	} );
+	return ! isEmpty( this.getSelectedOrAllWithPlugins() );
 };
 
 SitesList.prototype.fetchAvailableUpdates = function() {

@@ -31,8 +31,10 @@ function normalizeInvite( data ) {
 		date: data.invite.invite_date,
 		role: decodeEntities( data.invite.meta.role ),
 		sentTo: decodeEntities( data.invite.meta.sent_to ),
-		site: filterObjectProperties( Object.assign( data.blog_details, { ID: parseInt( data.invite.blog_id ), URL: data.blog_details.domain } ) ),
-		inviter: filterObjectProperties( data.inviter )
+		forceMatchingEmail: data.invite.meta.force_matching_email,
+		site: Object.assign( filterObjectProperties( data.blog_details ), { ID: parseInt( data.invite.blog_id, 10 ) } ),
+		inviter: filterObjectProperties( data.inviter ),
+		knownUser: data.invite.meta.known
 	}
 }
 
@@ -45,6 +47,6 @@ const reducer = ( state = initialState, payload ) => {
 			return state.setIn( [ 'errors', action.siteId, action.inviteKey ], action.error );
 	}
 	return state;
- }
+}
 
 export { initialState, reducer };

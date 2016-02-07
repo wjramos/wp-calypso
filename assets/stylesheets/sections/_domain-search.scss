@@ -180,7 +180,7 @@ form.google-apps-dialog {
 	}
 
 	.google-apps-dialog__user-fields {
-        animation: google-apps-user-show 0.3s ease-in-out;
+		animation: google-apps-user-show 0.3s ease-in-out;
 		margin-bottom: 20px;
 	}
 
@@ -218,21 +218,21 @@ form.google-apps-dialog {
 
 		&:before {
 			position: absolute;
-				left: 15px;
-				top: 6px;
-			@include noticon( '\f8b3', 60px );
+				left: 10px;
+				top: 7px;
+			@include noticon( '\f510', 30px );
 		}
 	}
 }
 
 @keyframes "google-apps-user-show" {
-  0% {
-    max-height: 0px;
-  }
+	0% {
+		max-height: 0px;
+	}
 
-  100% {
-    max-height: 150px;
-  }
+	100% {
+		max-height: 150px;
+	}
 }
 
 .google-apps-dialog__footer {

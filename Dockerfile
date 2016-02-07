@@ -14,7 +14,7 @@ RUN     apt-get -y update && apt-get -y install \
           make \
           build-essential
 
-ENV NODE_VERSION 0.12.9
+ENV NODE_VERSION 4.2.3
 
 RUN     wget https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-linux-x64.tar.gz && \
           tar -zxf node-v$NODE_VERSION-linux-x64.tar.gz -C /usr/local && \
@@ -23,7 +23,7 @@ RUN     wget https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-linux-x6
           ln -sf /usr/local/node/bin/node /usr/local/bin/ && \
           rm node-v$NODE_VERSION-linux-x64.tar.gz
 
-ENV     NODE_PATH /calypso/server:/calypso/shared
+ENV     NODE_PATH /calypso/server:/calypso/client
 
 # Install base npm packages to take advantage of the docker cache
 COPY    ./package.json /calypso/package.json

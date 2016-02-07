@@ -1,8 +1,10 @@
 /**
  * External dependencies
  */
-var React = require( 'react' ),
+var ReactDom = require( 'react-dom' ),
+	React = require( 'react' ),
 	classNames = require( 'classnames' ),
+	unescapeString = require( 'lodash/string/unescape' ),
 	isEqual = require( 'lodash/lang/isEqual' ),
 	debounce = require( 'lodash/function/debounce' ),
 	throttle = require( 'lodash/function/throttle' ),
@@ -13,8 +15,7 @@ var React = require( 'react' ),
 /**
  * Internal dependencies
  */
-var decodeEntities = require( 'lib/formatting' ).decodeEntities,
-	NoResults = require( './no-results' ),
+var NoResults = require( './no-results' ),
 	analytics = require( 'analytics' ),
 	Search = require( './search' );
 
@@ -78,7 +79,7 @@ module.exports = React.createClass( {
 				this.props.categories &&
 				nextSelectedIds.length === ( this.state.selectedIds.length + 1 ) &&
 				nextProps.categories.length === ( this.props.categories.length + 1 ) ) {
-			React.findDOMNode( this.refs.wrapper ).scrollTop = 0;
+			ReactDom.findDOMNode( this.refs.wrapper ).scrollTop = 0;
 		}
 
 		if ( ! isEqual( nextSelectedIds, this.state.selectedIds ) ) {
@@ -102,7 +103,7 @@ module.exports = React.createClass( {
 	},
 
 	checkScrollPosition: throttle( function() {
-		var node = React.findDOMNode( this );
+		var node = ReactDom.findDOMNode( this );
 
 		if ( node.scrollTop + node.clientHeight >= node.scrollHeight ) {
 			this.maybeFetchNextPage();
@@ -122,7 +123,7 @@ module.exports = React.createClass( {
 
 	renderItem: function( item ) {
 		var itemId = item.ID,
-			name = decodeEntities( item.name ) || this.translate( 'Untitled' ),
+			name = unescapeString( item.name ) || this.translate( 'Untitled' ),
 			checked = ( -1 !== this.state.selectedIds.indexOf( item.ID ) ),
 			inputType = this.props.multiple ? 'checkbox' : 'radio',
 			domId = camelCase( this.props.analyticsPrefix ) + '-option-' + itemId,

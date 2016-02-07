@@ -4,7 +4,9 @@ require( 'lib/react-test-env-setup' )();
  * External dependencies
  */
 import { expect } from 'chai';
-import React from 'react/addons';
+import ReactDom from 'react-dom';
+import React from 'react';
+import TestUtils from 'react-addons-test-utils';
 
 /**
  * Internal dependencies
@@ -12,7 +14,6 @@ import React from 'react/addons';
 import dirtyLinkedState from 'lib/mixins/dirty-linked-state';
 
 describe( 'Dirty Linked State Mixin', function() {
-	const TestUtils = React.addons.TestUtils;
 	const DirtyLinkedForm = React.createClass( {
 		mixins: [ dirtyLinkedState ],
 		getInitialState() {
@@ -24,21 +25,21 @@ describe( 'Dirty Linked State Mixin', function() {
 		render() {
 			return (
 				<form>
-					<input type="text" className='foo' valueLink={ this.linkState( 'foo' ) } />
-					<input type="text" className='bar' valueLink={ this.linkState( 'bar' ) } />
+					<input type="text" className="foo" valueLink={ this.linkState( 'foo' ) } />
+					<input type="text" className="bar" valueLink={ this.linkState( 'bar' ) } />
 				</form>
 			);
 		}
 	} );
 	var form, fooInput, barInput;
 	beforeEach( function() {
-		form = React.render( <DirtyLinkedForm />, document.body );
-		fooInput = React.findDOMNode( form ).querySelector( '.foo' );
-		barInput = React.findDOMNode( form ).querySelector( '.bar' );
+		form = ReactDom.render( <DirtyLinkedForm />, document.body );
+		fooInput = ReactDom.findDOMNode( form ).querySelector( '.foo' );
+		barInput = ReactDom.findDOMNode( form ).querySelector( '.bar' );
 	} );
 
 	afterEach( function() {
-		React.unmountComponentAtNode( document.body );
+		ReactDom.unmountComponentAtNode( document.body );
 	} );
 
 	it( 'initially has default state', function( ) {

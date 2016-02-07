@@ -2,12 +2,16 @@
  * External dependencies
  */
 import Debug from 'debug';
+
 /**
  * Internal dependencies
  */
 import Dispatcher from 'dispatcher';
 import wpcom from 'lib/wp';
 import { action as ActionTypes } from 'lib/invites/constants';
+import analytics from 'analytics';
+import { errorNotice, successNotice } from 'state/notices/actions';
+import { acceptedNotice } from 'my-sites/invites/utils';
 
 /**
  * Module variables
@@ -45,50 +49,93 @@ export function fetchInvite( siteId, inviteKey ) {
 			type: error ? ActionTypes.RECEIVE_INVITE_ERROR : ActionTypes.RECEIVE_INVITE,
 			siteId, inviteKey, data, error
 		} );
-	} );
-}
 
-export function createAccount( userData, callback ) {
-	return wpcom.undocumented().usersNew(
-		Object.assign( {}, userData, { validate: false } ),
-		( error, response ) => {
-			const bearerToken = response && response.bearer_token;
-			callback( error, bearerToken );
+		if ( error ) {
+			analytics.tracks.recordEvent( 'calypso_invite_validation_failure', {
+				error: error.error
+			} );
 		}
-	);
+	} );
 }
 
-export function acceptInvite( invite, callback, bearerToken ) {
-	if ( bearerToken ) {
-		wpcom.loadToken( bearerToken );
+export function createAccount( userData, invite, callback ) {
+	const send_verification_email = ( userData.email !== invite.sentTo );
+
+	return dispatch => {
+		wpcom.undocumented().usersNew(
+			Object.assign( {}, userData, { validate: false, send_verification_email } ),
+			( error, response ) => {
+				const bearerToken = response && response.bearer_token;
+				if ( error ) {
+					if ( error.message ) {
+						dispatch( errorNotice( error.message ) );
+					}
+					analytics.tracks.recordEvent( 'calypso_invite_account_creation_failed', {
+						error: error.error
+					} );
+				} else {
+					analytics.tracks.recordEvent( 'calypso_invite_account_created' );
+				}
+				callback( error, bearerToken );
+			}
+		);
 	}
-	return wpcom.undocumented().acceptInvite(
-		invite,
-		callback
-	);
 }
 
-export function displayInviteAccepted( siteId ) {
+export function acceptInvite( invite, callback ) {
+	return dispatch => {
+		Dispatcher.handleViewAction( {
+			type: ActionTypes.INVITE_ACCEPTED,
+			invite
+		} );
+		wpcom.undocumented().acceptInvite(
+			invite,
+			( error, data ) => {
+				Dispatcher.handleViewAction( {
+					type: error ? ActionTypes.RECEIVE_INVITE_ACCEPTED_ERROR : ActionTypes.RECEIVE_INVITE_ACCEPTED_SUCCESS,
+					error,
+					invite,
+					data
+				} );
+				if ( error ) {
+					if ( error.message ) {
+						dispatch( errorNotice( error.message, { displayOnNextPage: true } ) );
+					}
+					analytics.tracks.recordEvent( 'calypso_invite_accept_failed', {
+						error: error.error
+					} );
+				} else {
+					dispatch( successNotice( ... acceptedNotice( invite ) ) );
+					analytics.tracks.recordEvent( 'calypso_invite_accepted' );
+				}
+				if ( typeof callback === 'function' ) {
+					callback( error, data );
+				}
+			}
+		);
+	}
+}
+
+export function sendInvites( siteId, usernamesOrEmails, role, message, callback ) {
 	Dispatcher.handleViewAction( {
-		type: ActionTypes.DISPLAY_INVITE_ACCEPTED_NOTICE,
-		siteId
+		type: ActionTypes.SENDING_INVITES,
+		siteId, usernamesOrEmails, role, message
 	} );
-}
-
-export function dismissInviteAccepted() {
-	Dispatcher.handleViewAction( {
-		type: ActionTypes.DISMISS_INVITE_ACCEPTED_NOTICE
-	} );
-}
-
-export function displayInviteDeclined() {
-	Dispatcher.handleViewAction( {
-		type: ActionTypes.DISPLAY_INVITE_DECLINED_NOTICE
-	} );
-}
-
-export function dismissInviteDeclined() {
-	Dispatcher.handleViewAction( {
-		type: ActionTypes.DISMISS_INVITE_DECLINED_NOTICE
+	wpcom.undocumented().sendInvites( siteId, usernamesOrEmails, role, message, ( error, data ) => {
+		Dispatcher.handleServerAction( {
+			type: error ? ActionTypes.RECEIVE_SENDING_INVITES_ERROR : ActionTypes.RECEIVE_SENDING_INVITES_SUCCESS,
+			error,
+			siteId,
+			usernamesOrEmails,
+			role,
+			message,
+			data
+		} );
+		if ( error ) {
+			analytics.tracks.recordEvent( 'calypso_invite_send_failed' );
+		} else {
+			analytics.tracks.recordEvent( 'calypso_invite_send_success' );
+		}
+		callback( error, data );
 	} );
 }

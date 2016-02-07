@@ -1,7 +1,8 @@
 /**
  * External dependencies
  */
-var React = require( 'react/addons' ),
+var React = require( 'react' ),
+	PureRenderMixin = require( 'react-pure-render/mixin' ),
 	debug = require( 'debug' )( 'calypso:my-sites:posts' ),
 	debounce = require( 'lodash/function/debounce' ),
 	omit = require( 'lodash/object/omit' );
@@ -25,7 +26,7 @@ var GUESSED_POST_HEIGHT = 250;
 
 var PostList = React.createClass( {
 
-	mixins: [ React.addons.PureRenderMixin ],
+	mixins: [ PureRenderMixin ],
 
 	propTypes: {
 		context: React.PropTypes.object,
@@ -59,6 +60,7 @@ var Posts = React.createClass( {
 	propTypes: {
 		author: React.PropTypes.number,
 		context: React.PropTypes.object.isRequired,
+		hasRecentError: React.PropTypes.bool.isRequired,
 		lastPage: React.PropTypes.bool.isRequired,
 		loading: React.PropTypes.bool.isRequired,
 		page: React.PropTypes.number.isRequired,
@@ -73,6 +75,7 @@ var Posts = React.createClass( {
 
 	getDefaultProps: function() {
 		return {
+			hasRecentError: false,
 			loading: false,
 			lastPage: false,
 			page: 0,
@@ -111,7 +114,7 @@ var Posts = React.createClass( {
 	},
 
 	fetchPosts: function( options ) {
-		if ( this.props.loading || this.props.lastPage ) {
+		if ( this.props.loading || this.props.lastPage || this.props.hasRecentError ) {
 			return;
 		}
 		if ( options.triggeredByScroll ) {
@@ -142,36 +145,43 @@ var Posts = React.createClass( {
 				newPostLink = selectedSite ? '//wordpress.com/post/' + selectedSite.ID + '/new' : '//wordpress.com/post';
 			}
 
-			switch( this.props.statusSlug ) {
-				case 'drafts':
-					attributes = {
-						title: this.translate( 'You don\'t have any drafts.' ),
-						line: this.translate( 'Would you like to create one?' ),
-						action: this.translate( 'Start a Post' ),
-						actionURL: newPostLink
-					};
-					break;
-				case 'scheduled':
-					attributes = {
-						title: this.translate( 'You don\'t have any scheduled posts.' ),
-						line: this.translate( 'Would you like to schedule a draft to publish?' ),
-						action: this.translate( 'Edit Drafts' ),
-						actionURL: ( this.props.siteID ) ? '/posts/drafts/' + this.props.siteID : '/posts/drafts'
-					};
-					break;
-				case 'trashed':
-					attributes = {
-						title: this.translate( 'You don\'t have any posts in your trash folder.' ),
-						line: this.translate( 'Everything you write is solid gold.' )
-					};
-					break;
-				default:
-					attributes = {
-						title: this.translate( 'You haven\'t published any posts yet.' ),
-						line: this.translate( 'Would you like to publish your first post?' ),
-						action: this.translate( 'Start a Post' ),
-						actionURL: newPostLink
-					};
+			if ( this.props.hasRecentError ) {
+				attributes = {
+					title: this.translate( 'Oh, no! We couldn\'t fetch your posts.' ),
+					line: this.translate( 'Please check your internet connection.' )
+				}
+			} else {
+				switch ( this.props.statusSlug ) {
+					case 'drafts':
+						attributes = {
+							title: this.translate( 'You don\'t have any drafts.' ),
+							line: this.translate( 'Would you like to create one?' ),
+							action: this.translate( 'Start a Post' ),
+							actionURL: newPostLink
+						};
+						break;
+					case 'scheduled':
+						attributes = {
+							title: this.translate( 'You don\'t have any scheduled posts.' ),
+							line: this.translate( 'Would you like to schedule a draft to publish?' ),
+							action: this.translate( 'Edit Drafts' ),
+							actionURL: ( this.props.siteID ) ? '/posts/drafts/' + this.props.siteID : '/posts/drafts'
+						};
+						break;
+					case 'trashed':
+						attributes = {
+							title: this.translate( 'You don\'t have any posts in your trash folder.' ),
+							line: this.translate( 'Everything you write is solid gold.' )
+						};
+						break;
+					default:
+						attributes = {
+							title: this.translate( 'You haven\'t published any posts yet.' ),
+							line: this.translate( 'Would you like to publish your first post?' ),
+							action: this.translate( 'Start a Post' ),
+							actionURL: newPostLink
+						};
+				}
 			}
 		}
 
@@ -216,7 +226,7 @@ var Posts = React.createClass( {
 
 	render: function() {
 		var posts = this.props.posts,
-			placeholderCount = 6,
+			placeholderCount = 1,
 			placeholders = [],
 			postList,
 			i;

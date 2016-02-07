@@ -43,7 +43,7 @@
 }
 
 .author-selector__popover.popover {
-	z-index: 100;
+	z-index: z-index( 'root', '.author-selector__popover.popover' );
 }
 
 .author-selector__popover {
@@ -52,10 +52,6 @@
 		// .search should be cleaned up to not force height
 		height: 43px;
 		margin-bottom: 0;
-
-		.is-open .noticon-search {
-			color: $gray;
-		}
 
 		.search__input[type="search"] {
 			border-radius: 5px;

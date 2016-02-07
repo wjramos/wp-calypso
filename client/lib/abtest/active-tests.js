@@ -1,12 +1,4 @@
 module.exports = {
-	statsDefaultFilter: {
-		datestamp: '20150601',
-		variations: {
-			day: 90,
-			insights: 10
-		},
-		defaultVariation: 'day'
-	},
 	multiDomainRegistrationV1: {
 		datestamp: '20200721',
 		variations: {
@@ -15,15 +7,6 @@ module.exports = {
 			keepSearchingInGapps: 45
 		},
 		defaultVariation: 'singlePurchaseFlow'
-	},
-	verticalSurvey: {
-		datestamp: '20151202',
-		variations: {
-			noSurvey: 12,
-			oneStep: 44,
-			twoStep: 44
-		},
-		defaultVariation: 'noSurvey'
 	},
 	translatorInvitation: {
 		datestamp: '20150910',
@@ -39,19 +22,77 @@ module.exports = {
 		allowAnyLocale: true
 	},
 	plansPageBusinessAATest: {
-		datestamp: '20151104',
+		datestamp: '20160108',
 		variations: {
 			originalA: 50,
 			originalB: 50
 		},
 		defaultVariation: 'originalA'
 	},
-	businessPluginsNudge: {
-		datestamp: '20151119',
+	freeTrials: {
+		datestamp: '20160120',
 		variations: {
-			drake: 50,
-			nudge: 50
+			notOffered: 90,
+			offered: 10
 		},
-		defaultVariation: 'drake'
+		defaultVariation: 'notOffered'
+	},
+	monthlyPlanPricing: {
+		datestamp: '20160118',
+		variations: {
+			yearly: 50,
+			monthly: 50
+		},
+		defaultVariation: 'yearly'
+	},
+	plansUpgradeButton: {
+		datestamp: '20160129',
+		variations: {
+			original: 50,
+			button: 50
+		},
+		defaultVariation: 'original'
+	},
+	plansSocialProof: {
+		datestamp: '20160202',
+		variations: {
+			mostPopular: 33,
+			bestValue: 33,
+			noTeaser: 34
+		},
+		defaultVariation: 'mostPopular'
+	},
+	checkoutMasterbar: {
+		datestamp: '20160126',
+		variations: {
+			original: 50,
+			minimal: 50
+		},
+		defaultVariation: 'original'
+	},
+	periodLabelFree: {
+		datestamp: '20160202',
+		variations: {
+			forLife: 50,
+			withAdv: 50
+		},
+		defaultVariation: 'forLife'
+	},
+	plansFeatureList: {
+		datestamp: '20040202',
+		variations: {
+			list: 50,
+			description: 50
+		},
+		defaultVariation: 'description'
+	},
+	headstart: {
+		datestamp: '20160205',
+		variations: {
+			original: 20,
+			notTested: 60,
+			headstart: 20
+		},
+		defaultVariation: 'original'
 	},
 };

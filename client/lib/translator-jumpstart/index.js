@@ -2,8 +2,7 @@
  * External dependencies
  */
 var debug = require( 'debug' )( 'calypso:community-translator' ),
-	React = require( 'react' ),
-	ReactElement = require( 'react/lib/ReactElement' );
+	React = require( 'react' );
 
 /**
  * Internal dependencies
@@ -35,39 +34,6 @@ var communityTranslatorBaseUrl = 'https://widgets.wp.com/community-translator/',
 	communityTranslatorJumpstart, injectUrl, initialized,
 	previousEnabledSetting,
 	_shouldWrapTranslations = false;
-
-var communityTranslatorToString = function() {
-	if ( typeof this.props.children === 'string' ) {
-		return this.props.children;
-	}
-	return Object.prototype.toString.call( this );
-};
-
-/**
- * When a translation is used in an html attribute, the ReactElement-wrapped translation
- * is treated as a string and .toString() is called implicitly on it. To avoid undesired
- * [object Object] display, we return the plain text translation from the ReactElement by
- * overriding ReactElement.prototype's .toString() method.
- *
- * We bail out of the override for safety if ReactElement.prototype.toString() isn't
- * initially what we expect.
- */
-function overrideReactElementToString() {
-	if ( ReactElement.prototype.toString !== Object.prototype.toString ) {
-		debug( 'Aborted ReactElement.prototype.toString override: unexpected value!' );
-		return;
-	}
-	ReactElement.prototype.toString = communityTranslatorToString;
-}
-
-// We restore the original ReactElement.prototype.toString behaviour when CT is disabled.
-function restoreReactElementToString() {
-	if ( ReactElement.prototype.toString !== communityTranslatorToString ) {
-		debug( 'Aborted ReactElement.prototype.toString restore: unexpected value!' );
-		return;
-	}
-	ReactElement.prototype.toString = Object.prototype.toString;
-}
 
 /* "Enabled" means that the user has opted in on the settings page
  *     ( but it's false until userSettings has loaded)
@@ -108,7 +74,7 @@ communityTranslatorJumpstart = {
 	},
 
 	wrapTranslation: function( originalFromPage, displayedTranslationFromPage, optionsFromPage ) {
-		var props;
+		var props, dataElement;
 
 		if ( ! this.isEnabled() || ! this.isActivated() ) {
 			return displayedTranslationFromPage;
@@ -137,7 +103,18 @@ communityTranslatorJumpstart = {
 			props[ 'data-plural' ] = optionsFromPage.plural;
 		}
 
-		return React.DOM.data( props, displayedTranslationFromPage );
+		// React.DOM.data returns a frozen object, therefore we make a copy so that we can modify it below
+		dataElement = Object.assign( {}, React.DOM.data( props, displayedTranslationFromPage ) );
+
+		// now we can override the toString function which would otherwise return [object Object]
+		dataElement.toString = function() {
+			return displayedTranslationFromPage;
+		}
+
+		// freeze the object again to certify the same behavior as the original ReactElement object
+		Object.freeze( dataElement );
+
+		return dataElement;
 	},
 
 	init: function() {
@@ -222,7 +199,6 @@ communityTranslatorJumpstart = {
 		function activate() {
 			// Wrap DOM elements and then activate the translator
 			_shouldWrapTranslations = true;
-			overrideReactElementToString();
 			i18n.reRenderTranslations();
 			window.communityTranslator.load();
 			debug( 'Translator activated' );
@@ -233,7 +209,6 @@ communityTranslatorJumpstart = {
 			window.communityTranslator.unload();
 			// Remove all the data tags from the DOM
 			_shouldWrapTranslations = false;
-			restoreReactElementToString();
 			i18n.reRenderTranslations();
 			debug( 'Translator deactivated' );
 			return false;
@@ -316,9 +291,9 @@ i18n.registerComponentUpdateHook( function() {
 function trackTranslatorStatus() {
 	var newSetting = userSettings.getOriginalSetting( 'enable_translator' ),
 		changed = previousEnabledSetting !== newSetting,
-		tracksEvent = newSetting ?
-			'calypso_community_translator_enabled' :
-			'calypso_community_translator_disabled';
+		tracksEvent = newSetting
+			? 'calypso_community_translator_enabled'
+			: 'calypso_community_translator_disabled';
 
 	if ( changed && previousEnabledSetting !== undefined ) {
 		debug( tracksEvent );

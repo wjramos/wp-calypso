@@ -15,8 +15,9 @@ var assign = require( 'lodash/object/assign' ),
 	map = require( 'lodash/collection/map' ),
 	max = require( 'lodash/collection/max' ),
 	pick = require( 'lodash/object/pick' ),
-	startsWith = require( 'lodash/string/startsWith' ),
 	some = require( 'lodash/collection/some' ),
+	srcset = require( 'srcset' ),
+	startsWith = require( 'lodash/string/startsWith' ),
 	toArray = require( 'lodash/lang/toArray' ),
 	uniq = require( 'lodash/array/uniq' ),
 	url = require( 'url' );
@@ -26,6 +27,13 @@ var assign = require( 'lodash/object/assign' ),
  */
 var formatting = require( 'lib/formatting' ),
 	safeImageURL = require( 'lib/safe-image-url' );
+
+
+const DEFAULT_PHOTON_QUALITY = 80, // 80 was chosen after some heuristic testing as the best blend of size and quality
+	READING_WORDS_PER_SECOND = 250 / 60; // Longreads says that people can read 250 words per minute. We want the rate in words per second.
+
+const imageScaleFactor = ( typeof window !== 'undefined' && window.devicePixelRatio && window.devicePixelRatio > 1 ) ? 2 : 1,
+TRANSPARENT_GIF = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
 function debugForPost( post ) {
 	return function( msg ) {
@@ -49,10 +57,7 @@ function stripAutoPlays( query ) {
 	return query;
 }
 
-const DEFAULT_PHOTON_QUALITY = 80, // 80 was chosen after some heuristic testing as the best blend of size and quality
-	READING_WORDS_PER_SECOND = 250 / 60; // Longreads says that people can read 250 words per minute. We want the rate in words per second.
 
-const imageScaleFactor = ( typeof window !== 'undefined' && window.devicePixelRatio && window.devicePixelRatio > 1 ) ? 2 : 1;
 
 /**
  * Asynchronously normalizes an object shaped like a post. Works on a copy of the post and does not mutate the original post.
@@ -93,7 +98,11 @@ function normalizePost( post, transforms, callback ) {
 }
 
 function maxWidthPhotonishURL( imageURL, width ) {
-	var parsedURL = url.parse( imageURL, true, true ), // true, true means allow protocol-less hosts and parse the querystring
+	if ( ! imageURL ) {
+		return imageURL;
+	}
+
+	let parsedURL = url.parse( imageURL, true, true ), // true, true means allow protocol-less hosts and parse the querystring
 		isGravatar, sizeParam;
 
 	if ( ! parsedURL.host ) {
@@ -193,8 +202,8 @@ function removeUnsafeAttributes( node ) {
 const excludedContentImageUrlParts = [ 'gravatar.com' ];
 function isCandidateForContentImage( imageUrl ) {
 	return ! imageShouldBeRemovedFromContent( imageUrl ) && every( excludedContentImageUrlParts, function( part ) {
-			return imageUrl && imageUrl.toLowerCase().indexOf( part ) === -1;
-		} );
+		return imageUrl && imageUrl.toLowerCase().indexOf( part ) === -1;
+	} );
 }
 
 const bannedUrlParts = [
@@ -494,9 +503,10 @@ normalizePost.content = {
 
 			// push everything, including tracking pixels, over to a safe URL
 			forEach( images, function( image ) {
-				var imgSource = image.getAttribute( 'src' ),
-					hostName = url.parse( imgSource, false, true ).hostname,
-					safeSource;
+				let imgSource = image.getAttribute( 'src' ),
+					hostName = url.parse( imgSource, false, true ).hostname;
+
+				let safeSource;
 				// if imgSource is relative, prepend post domain so it isn't relative to calypso
 				if ( ! hostName ) {
 					imgSource = url.resolve( post.URL, imgSource );
@@ -504,20 +514,33 @@ normalizePost.content = {
 
 				removeUnsafeAttributes( image );
 
-				if ( imageShouldBeRemovedFromContent( imgSource ) ) {
+				safeSource = safeImageURL( imgSource );
+
+				if ( ! safeSource || imageShouldBeRemovedFromContent( imgSource ) ) {
 					image.parentNode.removeChild( image );
 					// fun fact: removing the node from the DOM will not prevent it from loading. You actually have to
 					// change out the src to change what loads. The following is a 1x1 transparent gif as a data URL
-					image.setAttribute( 'src', 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7' );
+					image.setAttribute( 'src', TRANSPARENT_GIF );
+					image.removeAttribute( 'srcset' );
 					return;
 				}
 
-				safeSource = safeImageURL( imgSource );
 				if ( maxWidth ) {
 					safeSource = maxWidthPhotonishURL( safeSource, maxWidth );
 				}
 
 				image.setAttribute( 'src', safeSource );
+
+				if ( image.hasAttribute( 'srcset' ) ) {
+					const imgSrcSet = srcset.parse( image.getAttribute( 'srcset' ) ).map( imgSrc => {
+						if ( ! url.parse( imgSrc.url, false, true ).hostname ) {
+							imgSrc.url = url.resolve( post.URL, imgSrc.url );
+						}
+						imgSrc.url = safeImageURL( imgSrc.url );
+						return imgSrc;
+					} );
+					image.setAttribute( 'srcset', srcset.stringify( imgSrcSet ) );
+				}
 
 				if ( isCandidateForContentImage( imgSource ) ) {
 					content_images.push( {
@@ -531,7 +554,8 @@ normalizePost.content = {
 
 			// grab all of the non-tracking pixels and push them into content_images
 			content_images = filter( content_images, function( image ) {
-				var edgeLength = image.height + image.width;
+				if ( ! image.src ) return false;
+				const edgeLength = image.height + image.width;
 				// if the image size isn't set (0) or is greater than 2, keep it
 				return edgeLength === 0 || edgeLength > 2;
 			} );
@@ -671,6 +695,19 @@ normalizePost.content = {
 				width: width,
 				height: height
 			};
+		} );
+
+		callback();
+	},
+
+	disableAutoPlayOnMedia: function disableAutoPlayOnMedia( post, callback ) {
+		if ( ! post.__contentDOM ) {
+			throw new Error( 'this transform must be used as part of withContentDOM' );
+		}
+
+		let mediaElements = toArray( post.__contentDOM.querySelectorAll( 'audio, video' ) );
+		mediaElements.forEach( function( mediaElement ) {
+			mediaElement.autoplay = false;
 		} );
 
 		callback();

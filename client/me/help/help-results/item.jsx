@@ -2,6 +2,7 @@
  * External dependencies
  */
 import React from 'react';
+import PureRenderMixin from 'react-pure-render/mixin';
 
 /**
  * Internal dependencies
@@ -11,11 +12,17 @@ import CompactCard from 'components/card/compact';
 module.exports = React.createClass( {
 	displayName: 'HelpResult',
 
-	mixins: [ React.addons.PureRenderMixin ],
+	mixins: [ PureRenderMixin ],
+
+	onClick: function( event ) {
+		if ( this.props.helpLink.disabled ) {
+			event.preventDefault();
+		}
+	},
 
 	render: function() {
 		return (
-			<a className="help-result" href={ this.props.helpLink.link } target="__blank">
+			<a className="help-result" href={ this.props.helpLink.link } target="__blank" onClick={ this.onClick }>
 				<CompactCard className="help-result__wrapper">
 					<svg className="help-result__icon" width="24" height="24" viewBox="0 0 24 24">
 						<defs>

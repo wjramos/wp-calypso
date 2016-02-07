@@ -10,7 +10,9 @@
 		&.is-selected,
 		&:hover,
 		&.is-x-post.is-selected,
-		&.is-x-post:hover {
+		&.is-x-post:hover,
+		&.tag-afk.is-selected,
+		&.tag-afk:hover {
 			box-shadow: 0 0 0 1px $gray,
 						0 2px 4px lighten( $gray, 20 );
 		}
@@ -36,7 +38,7 @@
 		position: absolute;
 			top: -5px;
 			right: 0;
-		z-index: 1;
+		z-index: z-index( 'reader-card-follow-button-parent', '.reader__card.card .follow-button' );
 		padding-right: 0;
 
 		@include breakpoint( "<480px" ) {
@@ -122,6 +124,52 @@
 			cursor: pointer;
 		}
 	}
+
+	&.tag-afk {
+		background: transparent;
+		box-shadow: none;
+		padding: 16px 24px;
+
+		&:hover {
+			cursor: pointer;
+		}
+
+		.reader__full-post-content,
+		.reader-post-byline__tag,
+		.reader-post-byline__date,
+		.reader__post-footer,
+		.site__info {
+			display: none;
+		}
+
+		.site {
+			pointer-events: none;
+		}
+
+		.reader__post-header {
+			margin-bottom: 0;
+		}
+
+		.reader__post-title {
+			font-size: 16px;
+			margin: 0;
+			position: absolute;
+				top: 14px;
+				left: 66px;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			max-width: calc( 100% - 90px );
+		}
+
+		.reader-post-byline {
+			margin: 0;
+			font-size: 13px;
+			position: absolute;
+				top: 30px;
+				left: 44px;
+		}
+	}
 }
 
 // Featured Image/Video
@@ -182,6 +230,7 @@
 		blockquote {
 			margin-left: 0;
 			margin-right: 0;
+			font-size: 16px;
 		}
 
 		p {

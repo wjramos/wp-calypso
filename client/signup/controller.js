@@ -1,7 +1,9 @@
 /**
  * External Dependencies
  */
+import ReactDom from 'react-dom';
 import React from 'react';
+import { Provider as ReduxProvider } from 'react-redux';
 import page from 'page';
 import qs from 'qs';
 import isEmpty from 'lodash/lang/isEmpty';
@@ -18,6 +20,7 @@ import SignupComponent from './main';
 import utils from './utils';
 import userModule from 'lib/user';
 import titleActions from 'lib/screen-title/actions';
+import { setSection } from 'state/ui/actions';
 const user = userModule();
 
 /**
@@ -81,26 +84,27 @@ export default {
 
 		analytics.pageView.record( basePath, basePageTitle + ' > Start > ' + flowName + ' > ' + stepName );
 
-		React.unmountComponentAtNode( document.getElementById( 'secondary' ) );
+		ReactDom.unmountComponentAtNode( document.getElementById( 'secondary' ) );
 		layoutFocus.set( 'content' );
 
 		titleActions.setTitle( i18n.translate( 'Create an account' ) );
 
-		context.layout.setState( {
-			section: 'signup',
-			noSidebar: true
-		} );
+		context.store.dispatch( setSection( 'signup', {
+			hasSidebar: false
+		} ) );
 
-		React.render(
-			React.createElement( SignupComponent, {
-				path: context.path,
-				refParameter,
-				queryObject,
-				locale: utils.getLocale( context.params ),
-				flowName: flowName,
-				stepName: stepName,
-				stepSectionName: stepSectionName
-			} ),
+		ReactDom.render(
+			React.createElement( ReduxProvider, { store: context.store },
+				React.createElement( SignupComponent, {
+					path: context.path,
+					refParameter,
+					queryObject,
+					locale: utils.getLocale( context.params ),
+					flowName: flowName,
+					stepName: stepName,
+					stepSectionName: stepSectionName
+				} )
+			),
 			document.getElementById( 'primary' )
 		);
 	},
@@ -114,7 +118,7 @@ export default {
 
 		titleActions.setTitle( i18n.translate( 'Create an account' ) );
 
-		React.render(
+		ReactDom.render(
 			React.createElement( PhoneSignupComponent, {
 				path: context.path,
 				countriesList: countriesList,
@@ -132,7 +136,7 @@ export default {
 
 		titleActions.setTitle( i18n.translate( 'Log in to your WordPress.com account' ) );
 
-		React.render(
+		ReactDom.render(
 			React.createElement( LogInComponent, {
 				path: context.path,
 				locale: context.params.lang

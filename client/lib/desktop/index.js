@@ -15,7 +15,7 @@ var siteStatsStickyTabStore = require( 'lib/site-stats-sticky-tab/store' ),
 	store = require( 'store' ),
 	oAuthToken = require( 'lib/oauth-token' ),
 	userUtilities = require( 'lib/user/utils' ),
-	location = require( './page-notifier' );
+	location = require( 'lib/route/page-notifier' );
 
 /**
  * Module variables
@@ -141,6 +141,10 @@ var Desktop = {
 	onCookieAuthComplete: function() {
 		var iframe = document.querySelector( '#wpnt-notes-iframe2' );
 		iframe.src = iframe.src;
+	},
+
+	print: function( title, html ) {
+		ipc.send( 'print', title, html );
 	}
 };
 

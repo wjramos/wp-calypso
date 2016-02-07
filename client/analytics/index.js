@@ -2,7 +2,10 @@
  * External dependencies
  */
 var debug = require( 'debug' )( 'calypso:analytics' ),
-	assign = require( 'lodash/object/assign' );
+	assign = require( 'lodash/object/assign' ),
+	omit = require( 'lodash/object/omit' ),
+	startsWith = require( 'lodash/string/startsWith' ),
+	isUndefined = require( 'lodash/lang/isUndefined' );
 
 /**
  * Internal dependencies
@@ -15,11 +18,11 @@ var config = require( 'config' ),
 // Load tracking scripts
 window._tkq = window._tkq || [];
 window.ga = window.ga || function() {
-		( window.ga.q = window.ga.q || [] ).push( arguments );
-	};
+	( window.ga.q = window.ga.q || [] ).push( arguments );
+};
 window.ga.l = +new Date();
 
-loadScript( '//stats.wp.com/w.js?48' );
+loadScript( '//stats.wp.com/w.js?51' );
 loadScript( '//www.google-analytics.com/analytics.js' );
 
 function buildQuerystring( group, name ) {
@@ -53,6 +56,16 @@ function buildQuerystringNoPrefix( group, name ) {
 
 	return uriComponent;
 }
+
+// we use this variable to track URL paths submitted to analytics.pageView.record
+// so that analytics.pageLoading.record can re-use the urlPath parameter.
+// this helps avoid some nasty coupling, but it's not the cleanest code - sorry.
+var mostRecentUrlPath = null;
+
+window.addEventListener('popstate', function() {
+	// throw away our URL value if the user used the back/forward buttons
+	mostRecentUrlPath = null;
+});
 
 var analytics = {
 
@@ -90,8 +103,17 @@ var analytics = {
 	// pageView is a wrapper for pageview events across Tracks and GA
 	pageView: {
 		record: function( urlPath, pageTitle ) {
+			mostRecentUrlPath = urlPath;
 			analytics.tracks.recordPageView( urlPath );
 			analytics.ga.recordPageView( urlPath, pageTitle );
+		}
+	},
+
+	timing: {
+		record: function( eventType, duration, triggerName ) {
+			var urlPath = mostRecentUrlPath || 'unknown';
+			analytics.ga.recordTiming( urlPath, eventType, duration, triggerName );
+			analytics.statsd.recordTiming( urlPath, eventType, duration, triggerName );
 		}
 	},
 
@@ -101,7 +123,7 @@ var analytics = {
 
 			eventProperties = eventProperties || {};
 
-			debug( 'Record event "%s" called with props %s', eventName, JSON.stringify( eventProperties ) );
+			debug( 'Record event "%s" called with props %o', eventName, eventProperties );
 
 			if ( eventName.indexOf( 'calypso_' ) !== 0 ) {
 				debug( '- Event name must be prefixed by "calypso_"' );
@@ -111,8 +133,14 @@ var analytics = {
 			if ( _superProps ) {
 				superProperties = _superProps.getAll();
 				debug( '- Super Props: %o', superProperties );
-				eventProperties = assign( eventProperties, superProperties );
+				eventProperties = assign( {}, eventProperties, superProperties ); // assign to a new object so we don't modify the argument
 			}
+
+			// Remove properties that have an undefined value
+			// This allows a caller to easily remove properties from the recorded set by setting them to undefined
+			eventProperties = omit( eventProperties, isUndefined );
+
+			debug( 'Recording event "%s" with actual props %o', eventName, eventProperties );
 
 			window._tkq.push( [ 'recordEvent', eventName, eventProperties ] );
 		},
@@ -121,6 +149,46 @@ var analytics = {
 			analytics.tracks.recordEvent( 'calypso_page_view', {
 				'path': urlPath
 			} );
+		}
+	},
+
+	statsd: {
+		recordTiming: function( pageUrl, eventType, duration, triggerName ) {
+			// ignore triggerName for now, it has no obvious place in statsd
+			if ( config( 'boom_analytics_enabled' ) ) {
+				var featureSlug = pageUrl === '/' ? 'homepage' : pageUrl.replace(/^\//, '').replace(/\.|\/|:/g, '_');
+				var matched;
+				// prevent explosion of read list metrics
+				// this is a hack - ultimately we want to report this URLs in a more generic way to
+				// google analytics
+				if ( startsWith( featureSlug, 'read_list' ) ) {
+					featureSlug = 'read_list';
+				} else if ( startsWith( featureSlug, 'tag_' ) ) {
+					featureSlug = 'tag__id';
+				} else if ( startsWith( featureSlug, 'domains_add_suggestion_' ) ) {
+					featureSlug = 'domains_add_suggestion__suggestion__domain';
+				} else if ( startsWith( document.location.pathname, '/plugins/browse/' ) ) {
+					featureSlug = 'plugins_browse__site';
+				} else if ( featureSlug.match( /^plugins_[^_].*__/ ) ) {
+					featureSlug = 'plugins__site__plugin';
+				} else if ( featureSlug.match( /^plugins_[^_]/ ) ) {
+					featureSlug = 'plugins__site__unknown'; // fail safe because there seems to be some URLs we're not catching
+				} else if ( startsWith( featureSlug, 'read_post_feed_' ) ) {
+					featureSlug = 'read_post_feed__id';
+				} else if ( startsWith( featureSlug, 'read_post_id_' ) ) {
+					featureSlug = 'read_post_id__id';
+				} else if ( ( matched = featureSlug.match( /^start_(.*)_(..)$/ ) ) != null ) {
+					featureSlug = `start_${matched[1]}`;
+				}
+
+				var json = JSON.stringify({
+					beacons:[
+						'calypso.' + config( 'boom_analytics_key' ) + '.' + featureSlug + '.' + eventType.replace('-', '_') + ':' + duration + '|ms'
+					]
+				});
+
+				new Image().src = 'https://pixel.wp.com/boom.gif?v=calypso&u=' + encodeURIComponent(pageUrl) + '&json=' + encodeURIComponent(json);
+			}
 		}
 	},
 
@@ -176,6 +244,16 @@ var analytics = {
 
 			if ( config( 'google_analytics_enabled' ) ) {
 				window.ga( 'send', 'event', category, action, label, value );
+			}
+		},
+
+		recordTiming: function( urlPath, eventType, duration, triggerName ) {
+			analytics.ga.initialize();
+
+			debug( 'Recording Timing ~ [URL: ' + urlPath + '] [Duration: ' + duration + ']' );
+
+			if ( config( 'google_analytics_enabled' ) ) {
+				window.ga( 'send', 'timing', urlPath, eventType, duration, triggerName);
 			}
 		}
 	},

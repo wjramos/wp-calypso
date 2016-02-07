@@ -2,6 +2,7 @@
  * External dependencies
  */
 import React, { PropTypes } from 'react';
+import PureRenderMixin from 'react-pure-render/mixin';
 import classNames from 'classnames';
 import noop from 'lodash/utility/noop';
 import includes from 'lodash/collection/includes';
@@ -18,7 +19,7 @@ import ProgressBar from 'components/progress-bar';
 export default React.createClass( {
 	displayName: 'SiteSettingsUploadingPane',
 
-	mixins: [ React.addons.PureRenderMixin ],
+	mixins: [ PureRenderMixin ],
 
 	propTypes: {
 		description: PropTypes.oneOfType( [ PropTypes.node, PropTypes.string ] ),
@@ -87,7 +88,7 @@ export default React.createClass( {
 	},
 
 	initiateFromForm: function( event ) {
-		let fileSelector = this.refs.fileSelector.getDOMNode();
+		let fileSelector = this.refs.fileSelector;
 
 		event.preventDefault();
 		event.stopPropagation();
@@ -103,7 +104,7 @@ export default React.createClass( {
 	},
 
 	openFileSelector: function() {
-		let fileSelector = this.refs.fileSelector.getDOMNode();
+		let fileSelector = this.refs.fileSelector;
 
 		fileSelector.click();
 	},

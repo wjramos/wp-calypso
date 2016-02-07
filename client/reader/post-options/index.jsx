@@ -1,9 +1,13 @@
-/** External dependencies */
-var React = require( 'react/addons' ),
+/**
+ * External dependencies
+ */
+var React = require( 'react' ),
 	noop = require( 'lodash/utility/noop' ),
 	page = require( 'page' );
 
-/** Internal dependencies */
+/**
+ * Internal dependencies
+ */
 var PopoverMenu = require( 'components/popover/menu' ),
 	PopoverMenuItem = require( 'components/popover/menu-item' ),
 	FeedSubscriptionStore = require( 'lib/reader-feed-subscriptions/index' ),
@@ -22,12 +26,15 @@ var PostOptions = React.createClass( {
 	},
 
 	getDefaultProps: function() {
-		return { onBlock: noop };
+		return {
+			onBlock: noop,
+			position: 'top left'
+		};
 	},
 
 	getInitialState: function() {
 		var state = this.getStateFromStores();
-		state.popoverPosition = 'bottom left';
+		state.popoverPosition = this.props.position;
 		state.showPopoverMenu = false;
 		return state;
 	},

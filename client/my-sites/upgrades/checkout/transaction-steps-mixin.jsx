@@ -122,7 +122,7 @@ var TransactionStepsMixin = {
 						success: false
 					} );
 				} else if ( step.data ) {
-					adTracking.recordPurchases( cartValue.products );
+					cartValue.products.map( adTracking.recordPurchase );
 
 					analytics.tracks.recordEvent( 'calypso_checkout_payment_success', {
 						coupon_code: cartValue.coupon,
@@ -173,7 +173,7 @@ var TransactionStepsMixin = {
 
 		defer( () => {
 			// The Thank You page throws a rendering error if this is not in a defer.
-			page( this.props.redirectTo );
+			page( this.props.redirectTo() );
 		} );
 	}
 };

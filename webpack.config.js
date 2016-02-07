@@ -10,13 +10,13 @@ var webpack = require( 'webpack' ),
  * Internal dependencies
  */
 var config = require( './server/config' ),
-	ChunkFileNamePlugin = require( './server/bundler/plugin' );
+	ChunkFileNamePlugin = require( './server/bundler/plugin' ),
+	PragmaCheckPlugin = require( 'server/pragma-checker' );
 
 /**
  * Internal variables
  */
 var CALYPSO_ENV = process.env.CALYPSO_ENV || 'development',
-	PORT = process.env.PORT || 3000,
 	jsLoader,
 	webpackConfig;
 
@@ -58,7 +58,7 @@ webpackConfig = {
 	},
 	resolve: {
 		extensions: [ '', '.json', '.js', '.jsx' ],
-		modulesDirectories: [ 'node_modules', path.join( __dirname, 'client' ), path.join( __dirname, 'shared' ) ]
+		modulesDirectories: [ 'node_modules', path.join( __dirname, 'client' ) ]
 	},
 	node: {
 		console: false,
@@ -97,9 +97,10 @@ jsLoader = {
 };
 
 if ( CALYPSO_ENV === 'development' ) {
+	webpackConfig.plugins.push( new PragmaCheckPlugin() );
 	webpackConfig.plugins.push( new webpack.HotModuleReplacementPlugin() );
 	webpackConfig.entry[ 'build-' + CALYPSO_ENV ] = [
-		'webpack-dev-server/client?http://calypso.localhost:' + PORT,
+		'webpack-dev-server/client?/',
 		'webpack/hot/only-dev-server',
 		path.join( __dirname, 'client', 'boot' )
 	];

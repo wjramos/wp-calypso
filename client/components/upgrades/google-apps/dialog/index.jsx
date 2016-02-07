@@ -2,7 +2,7 @@
  * External dependencies
  */
 var React = require( 'react' ),
-	ReactCSSTransitionGroup = React.addons.CSSTransitionGroup;
+	ReactCSSTransitionGroup = require( 'react-addons-css-transition-group' );
 
 /**
  * Internal dependencies
@@ -89,7 +89,10 @@ var GoogleAppsDialog = React.createClass( {
 				<GoogleAppsProductDetails
 					price={ price }
 				/>
-				<ReactCSSTransitionGroup transitionName='google-apps-dialog__users'>
+				<ReactCSSTransitionGroup
+					transitionName='google-apps-dialog__users'
+					transitionEnterTimeout={ 200 }
+					transitionLeaveTimeout={ 200 }>
 					{ googleAppsUsers }
 				</ReactCSSTransitionGroup>
 				{ this.footer() }

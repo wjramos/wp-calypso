@@ -6,6 +6,7 @@ import assign from 'lodash/object/assign';
 /**
  * Internal dependencies
  */
+import { recordAddToCart } from 'analytics/ad-tracking';
 import { action as ActionTypes } from '../constants';
 import Dispatcher from 'dispatcher';
 import { cartItems } from 'lib/cart-values';
@@ -39,22 +40,31 @@ function removePrivacyFromAllDomains() {
 	} );
 }
 
-function addItem( cartItem ) {
-	const extra = assign( {}, cartItem.extra, {
+function addItem( item ) {
+	addItems( [ item ] );
+}
+
+function addItems( items ) {
+	const extendedItems = items.map( ( item ) => {
+		const extra = assign( {}, item.extra, {
 			context: 'calypstore'
-		} ),
-		newCartItem = assign( {}, cartItem, { extra } );
+		} );
+
+		return assign( {}, item, { extra } );
+	} );
+
+	extendedItems.forEach( item => recordAddToCart( item ) );
 
 	Dispatcher.handleViewAction( {
-		type: ActionTypes.CART_ITEM_ADD,
-		cartItem: newCartItem
+		type: ActionTypes.CART_ITEMS_ADD,
+		cartItems: extendedItems
 	} );
 }
 
-function removeItem( cartItem ) {
+function removeItem( item ) {
 	Dispatcher.handleViewAction( {
 		type: ActionTypes.CART_ITEM_REMOVE,
-		cartItem
+		cartItem: item
 	} );
 }
 
@@ -82,6 +92,7 @@ function applyCoupon( coupon ) {
 export {
 	addDomainToCart,
 	addItem,
+	addItems,
 	addPrivacyToAllDomains,
 	applyCoupon,
 	closeCartPopup,

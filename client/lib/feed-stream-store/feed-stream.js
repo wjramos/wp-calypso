@@ -43,6 +43,7 @@ var FeedStream = function( spec ) {
 	this.id = spec.id;
 
 	assign( this, {
+		id: spec.id,
 		postKeys: [], // an array of keys, as determined by the key maker,
 		pendingPostKeys: [],
 		postById: {},
@@ -66,7 +67,8 @@ var FeedStream = function( spec ) {
 			interval: 60 * 1000,
 			leading: false,
 			pauseWhenHidden: false
-		} )
+		} ),
+		startDate: spec.startDate
 	} );
 };
 
@@ -240,10 +242,15 @@ assign( FeedStream.prototype, {
 		return date;
 	},
 
-	hasRecentError: function() {
+	/**
+	 * Checks if an error has occurred in the past minute.
+	 *
+	 * @param {string} errorType - Error type to check. If not provided, we'll check for errors of any type.
+	 */
+	hasRecentError: function( errorType ) {
 		var aMinuteAgo = Date.now() - ( 60 * 1000 );
 		return this.errors.some( function( error ) {
-			return error.timestamp && error.timestamp > aMinuteAgo;
+			return ( error.timestamp && error.timestamp > aMinuteAgo ) && ( ! errorType || errorType === error.error );
 		} );
 	},
 
@@ -379,9 +386,6 @@ assign( FeedStream.prototype, {
 		return map( posts, this.keyMaker );
 	},
 
-	/**
- 	 * Process a new page of data and concatenate to the end of the list
- 	**/
 	receivePage: function( id, error, data ) {
 		var posts, postKeys;
 
@@ -441,7 +445,7 @@ assign( FeedStream.prototype, {
 			postKeys = this.filterNewPosts( data.posts );
 			if ( postKeys.length > 0 ) {
 				this.pendingPostKeys = postKeys;
-				this.pendingDateAfter = moment( data.date_range.after );
+				this.pendingDateAfter = moment( FeedPostStore.get( this.keyMaker( data.posts[ data.posts.length - 1 ] ) )[ this.dateProperty ] );
 				this.emit( 'change' );
 			}
 		}

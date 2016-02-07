@@ -1,7 +1,8 @@
 /**
  * External dependencies
  */
-var React = require( 'react/addons' ),
+var React = require( 'react' ),
+	update = require( 'react-addons-update' ),
 	cloneDeep = require( 'lodash/lang/cloneDeep' ),
 	find = require( 'lodash/collection/find' ),
 	debug = require( 'debug' )( 'calypso:menus:editable-item' ); // eslint-disable-line no-unused-vars
@@ -10,27 +11,35 @@ var React = require( 'react/addons' ),
  * Internal dependencies
  */
 var siteMenus = require( 'lib/menu-data' ),
-		MenuUtils = require( './menu-utils' ),
-		observe = require( 'lib/mixins/data-observe' ),
-		TaxonomyList = require ( './item-options/taxonomy-list' ),
-		CategoryOptions = require( './item-options/category-options' ),
-		PostList = require( './item-options/post-list' ),
-		MenuPanelBackButton = require( './menu-panel-back-button' ),
-		analytics = require( 'analytics' );
+	MenuUtils = require( './menu-utils' ),
+	observe = require( 'lib/mixins/data-observe' ),
+	TaxonomyList = require( './item-options/taxonomy-list' ),
+	CategoryOptions = require( './item-options/category-options' ),
+	PostList = require( './item-options/post-list' ),
+	MenuPanelBackButton = require( './menu-panel-back-button' ),
+	analytics = require( 'analytics' ),
+	Gridicon = require( 'components/gridicon' );
 
 /**
  * Components
  */
-var Button = React.createClass({
+var Button = React.createClass( {
 	render: function() {
 		var className = ( this.props.className || '' ) + ' button';
+		var gridiconButton = '';
+
+		if ( this.props.icon ) {
+			gridiconButton = <Gridicon icon={ this.props.icon } />;
+		}
+
 		return (
-			<button className={ className } onClick={ this.props.onClick }>
+			<button className={ className } onClick={ this.props.onClick } >
+				{ gridiconButton }
 				{ this.props.label || '' }
 			</button>
 		);
 	}
-});
+} );
 
 var MenuEditableItem = React.createClass( {
 	mixins: [ observe( 'itemTypes' ) ],
@@ -93,7 +102,7 @@ var MenuEditableItem = React.createClass( {
 			this.setState( { firedTitleChangeGAEvent: true } );
 		}
 
-		this.setState( React.addons.update( this.state, {
+		this.setState( update( this.state, {
 			item: { name: { $set: event.target.value } },
 			userChangedName: { $set: true }
 		} ) );
@@ -105,7 +114,7 @@ var MenuEditableItem = React.createClass( {
 			this.setState( { firedUrlChangeGAEvent : true } );
 		}
 
-		this.setState( React.addons.update( this.state, {
+		this.setState( update( this.state, {
 			item: {
 				url: { $set: event.target.value },
 				type: { $set: this.state.itemType.name },
@@ -117,7 +126,7 @@ var MenuEditableItem = React.createClass( {
 	toggleUrlTarget: function() {
 		analytics.ga.recordEvent( 'Menus', 'Set link target' );
 
-		this.setState( React.addons.update( this.state, {
+		this.setState( update( this.state, {
 			item: {
 				link_target: { $set: ! this.state.item.link_target ? '_blank' : '' }
 			}
@@ -147,7 +156,7 @@ var MenuEditableItem = React.createClass( {
 
 	setItemContent: function( content ) {
 		analytics.ga.recordEvent( 'Menus', 'Selected Menu Item' );
-		this.setState( React.addons.update( this.state, {
+		this.setState( update( this.state, {
 			item: {
 				content_id: { $set: content.ID },
 				name: { $apply: this.getItemName.bind( null, content ) },
@@ -296,8 +305,9 @@ var MenuEditableItem = React.createClass( {
 		return [
 			{
 				key: 'remove',
-				className: 'noticon noticon-trash',
+				className: 'is-scary',
 				showIfNew: false,
+				icon: 'trash',
 				onClick: this.remove
 			},
 			{
@@ -314,10 +324,10 @@ var MenuEditableItem = React.createClass( {
 			},
 			{
 				key: 'ok',
-				className: 'button is-primary',
+				className: 'is-primary',
 				label: this.isNew() ?
-						this.translate( 'Add Item' ) :
-						this.translate( 'OK' ),
+					this.translate( 'Add Item', { textOnly: true } ) :
+					this.translate( 'OK', { textOnly: true } ),
 				showIfNew: true,
 				onClick: this.save
 			}

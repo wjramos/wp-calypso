@@ -58,6 +58,64 @@
 	}
 }
 
+.notice__button {
+	cursor: pointer;
+	margin-left: 0.428em;
+}
+
+// "X" for dismissing a notice
+.notice__dismiss {
+	display: flex;
+	padding: 11px 16px;
+	cursor: pointer;
+	color: $gray;
+
+	@include breakpoint( ">660px" ) {
+		padding: 13px 16px;
+	}
+
+	&:hover,
+	&:focus {
+		color: $gray-dark;
+	}
+
+	.notice & {
+		color: $gray;
+		opacity: 0.85;
+
+		&:hover,
+		&:focus {
+			opacity: 1;
+		}
+	}
+}
+
+// specificity for general `a` elements within notice is too great
+.notice a.notice__action {
+	background: rgba( 0, 0, 0, 0.2 );
+	box-sizing: border-box;
+	color: $white;
+	cursor: pointer;
+	display: flex;
+		align-items: center;
+	font-size: 15px;
+	font-weight: 400;
+	margin-left: auto; // forces the element to the right;
+	padding: 13px 16px;
+	text-decoration: none;
+	white-space: nowrap;
+
+	.gridicon {
+		margin-left: 8px;
+		opacity: 0.7;
+	}
+
+	&:hover,
+	&:focus {
+		background: rgba( 255, 255, 255, 0.2 );
+	}
+}
+
 // General styles for html elements
 // rendered inside a notice
 .notice {
@@ -119,84 +177,64 @@
 	}
 }
 
-.notice__button {
-	cursor: pointer;
-	margin-left: 0.428em;
-}
+// Compact notices
+.notice.is-compact {
+	border-radius: 2px;
+	color: $white;
+	display: inline-flex;
+	flex-wrap: nowrap;
+	min-height: 20px;
+	margin: 0;
+	padding: 0;
+	text-decoration: none;
+	text-transform: none;
+	vertical-align: middle;
 
-// "X" for dismissing a notice
-.notice__dismiss {
-	display: flex;
-	padding: 9px 16px;
-	cursor: pointer;
-	color: $gray;
-
-	@include breakpoint( ">660px" ) {
-		padding: 13px 16px;
+	.notice__text {
+		font-size: 12px;
+		padding: 6px 8px;
+		line-height: 1;
 	}
 
-	&:hover,
-	&:focus {
-		color: $gray-dark;
+	.notice__icon {
+		align-self: center;
+		flex-shrink: 0;
+		padding: 0 0 0 8px;
+		width: 14px;
+		height: 14px;
+		vertical-align: middle;
 	}
 
-	.notice & {
-		color: $gray;
-		opacity: 0.85;
+	.notice__dismiss {
+		display: none;
+	}
+
+	a.notice__action {
+		background: transparent;
+		display: inline-block;
+		font-size: 11px;
+		font-weight: 600;
+		align-self: center;
+		margin-left: 16px;
+		padding: 0 8px;
+		text-decoration: underline;
+		text-transform: uppercase;
 
 		&:hover,
+		&:active,
 		&:focus {
+			background: transparent;
+			text-decoration: none;
+		}
+
+		.gridicon {
+			margin-left: 8px;
+			width: 14px;
+			height: 14px;
+			vertical-align: sub;
 			opacity: 1;
 		}
 	}
 }
 
-// Compact notices
-.notice.is-compact {
-	margin-bottom: 8px;
-	font-size: 14px;
 
-	.notice__text {
-		padding: 11px 24px 11px 16px;
-	}
-
-	.notice__icon {
-		display: none;
-	}
-
-	.notice__dismiss {
-		padding: 9px 16px;
-	}
-
-	a.notice__action .gridicon {
-		width: 18px;
-		height: 18px;
-	}
-}
-
-// ArrowLink sub-component
-// specificity for general `a` elements within notice is too great
-.notice a.notice__action {
-	background: rgba( 0, 0, 0, 0.2 );
-	box-sizing: border-box;
-	color: $white;
-	cursor: pointer;
-	display: flex;
-		align-items: center;
-	font-size: 15px;
-	font-weight: 400;
-	margin-left: auto; // forces the element to the right;
-	padding: 13px 16px;
-	text-decoration: none;
-	white-space: nowrap;
-
-	.gridicon {
-		margin-left: 8px;
-		opacity: 0.7;
-	}
-
-	&:hover,
-	&:focus {
-		background: rgba( 255, 255, 255, 0.2 );
-	}
-}

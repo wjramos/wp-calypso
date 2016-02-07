@@ -11,12 +11,22 @@ doctype html
 
 html(lang=lang, dir=isRTL ? 'rtl' : 'ltr', class=isFluidWidth ? 'is-fluid-width' : '')
 	head
-		title WordPress.com
+		if helmetTitle
+			!= helmetTitle
+		else
+			title WordPress.com
 		meta(charset='utf-8')
 		meta(http-equiv='X-UA-Compatible' content='IE=Edge')
 		meta(name='viewport', content='width=device-width, initial-scale=1, maximum-scale=1')
 		meta(name='format-detection', content='telephone=no')
 		meta(name='mobile-web-app-capable', content='yes')
+
+		if helmetMeta
+			!= helmetMeta
+
+		if helmetLink
+			!= helmetLink
+
 		link(rel='shortcut icon', type='image/vnd.microsoft.icon', href=faviconURL, sizes='16x16 32x32')
 		link(rel='shortcut icon', type='image/x-icon', href=faviconURL, sizes='16x16 32x32')
 		link(rel='icon', type='image/x-icon', href=faviconURL, sizes='16x16 32x32')
@@ -36,6 +46,7 @@ html(lang=lang, dir=isRTL ? 'rtl' : 'ltr', class=isFluidWidth ? 'is-fluid-width'
 		link(rel='stylesheet', href='//fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,400,300,600|Merriweather:700,400,700italic,400italic')
 		link(rel='stylesheet', href='//s1.wp.com/i/noticons/noticons.css?v=20150727')
 		link(rel='stylesheet', href='//s1.wp.com/wp-includes/css/dashicons.css?v=20150727')
+		link(rel='stylesheet', href='//s1.wp.com/wp-content/mu-plugins/smileyproject/smileyproject.css')
 		if isRTL
 			link(rel='stylesheet', href=urls['style-rtl.css'])
 		else
@@ -45,12 +56,20 @@ html(lang=lang, dir=isRTL ? 'rtl' : 'ltr', class=isFluidWidth ? 'is-fluid-width'
 				link(rel='stylesheet', href=urls['style.css'])
 
 	body(class=isRTL ? 'rtl' : '')
-		#wpcom.wpcom-site
-			.wpcom-site__logo.noticon.noticon-wordpress
+		noscript
+			|Please enable JavaScript in your browser to enjoy WordPress.com.
+
+		if layout
+			#wpcom.wpcom-site!= layout
+		else
+			#wpcom.wpcom-site
+				.wpcom-site__logo.noticon.noticon-wordpress
 		if badge
 			div.environment-badge
 				a(class='bug-report', href=feedbackURL, title='Report an issue', target='_blank')
 				span(class=['environment', 'is-' + badge])=badge
+				if branchName && branchName !== 'master'
+					span(class=['environment', 'branch-name'], title='Commit ' + commitChecksum)=branchName
 				if devDocs
 					span(class=['environment', 'is-docs'])
 						a(href=devDocsURL title='DevDocs') docs
@@ -95,6 +114,8 @@ html(lang=lang, dir=isRTL ? 'rtl' : 'ltr', class=isFluidWidth ? 'is-fluid-width'
 			script(type='text/javascript')!='var currentUser = ' + sanitize.jsonStringifyForHtml( user )
 		if app
 			script(type='text/javascript')!='var app = ' + sanitize.jsonStringifyForHtml( app )
+		if initialReduxState
+			script(type='text/javascript')!='var initialReduxState = ' + sanitize.jsonStringifyForHtml( initialReduxState )
 		if i18nLocaleScript
 			script(src=i18nLocaleScript)
 		if 'development' === env || isDebug

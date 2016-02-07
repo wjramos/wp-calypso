@@ -3,10 +3,11 @@ require( 'lib/react-test-env-setup' )();
 /**
  * External Dependencies
  */
-var	sinon = require( 'sinon' ),
+const	sinon = require( 'sinon' ),
 	sinonChai = require( 'sinon-chai' ),
-	React = require( 'react/addons' ),
-	TestUtils = React.addons.TestUtils,
+	ReactDom = require( 'react-dom' ),
+	React = require( 'react' ),
+	TestUtils = require( 'react-addons-test-utils' ),
 	chai = require( 'chai' );
 
 chai.use( sinonChai );
@@ -36,12 +37,12 @@ describe( 'Cart Buttons', function() {
 		} );
 
 		it( 'should track "keepSearchButtonClick" event', function() {
-			TestUtils.Simulate.click( React.findDOMNode( this.cartButtonsComponent.refs.keepSearchingButton ) );
+			TestUtils.Simulate.click( ReactDom.findDOMNode( this.cartButtonsComponent.refs.keepSearchingButton ) );
 			chai.expect( this.recordStub ).to.have.been.calledWith( 'keepSearchButtonClick' );
 		} );
 
 		it( 'call props.onKeepSearchingClick', function() {
-			TestUtils.Simulate.click( React.findDOMNode( this.cartButtonsComponent.refs.keepSearchingButton ) );
+			TestUtils.Simulate.click( ReactDom.findDOMNode( this.cartButtonsComponent.refs.keepSearchingButton ) );
 			chai.expect( this.onKeepSearchingClick ).to.have.been.called;
 		} );
 	} );
@@ -55,7 +56,7 @@ describe( 'Cart Buttons', function() {
 		} );
 
 		it( 'should track "checkoutButtonClick" event', function() {
-			TestUtils.Simulate.click( React.findDOMNode( this.cartButtonsComponent.refs.checkoutButton ) );
+			TestUtils.Simulate.click( ReactDom.findDOMNode( this.cartButtonsComponent.refs.checkoutButton ) );
 			chai.expect( this.recordStub ).to.have.been.calledWith( 'checkoutButtonClick' );
 		} );
 	} );

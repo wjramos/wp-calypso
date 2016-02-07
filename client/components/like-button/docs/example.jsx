@@ -1,7 +1,8 @@
 /**
 * External dependencies
 */
-var React = require( 'react' );
+var React = require( 'react' ),
+	PureRenderMixin = require( 'react-pure-render/mixin' );
 
 /**
  * Internal dependencies
@@ -11,7 +12,7 @@ var LikeButton = require( 'components/like-button/button' ),
 
 var SimpleLikeButtonContainer = React.createClass( {
 
-	mixins: [ React.addons.PureRenderMixin ],
+	mixins: [ PureRenderMixin ],
 
 	getInitialState: function() {
 		return {
@@ -40,13 +41,13 @@ var SimpleLikeButtonContainer = React.createClass( {
 var LikeButtons = React.createClass( {
 	displayName: 'LikeButton',
 
-	mixins: [ React.addons.PureRenderMixin ],
+	mixins: [ PureRenderMixin ],
 
 	render: function() {
 		return (
 			<div className="design-assets__group">
 				<h2>
-					<a href="/devdocs/design/like-button">Like button</a>
+					<a href="/devdocs/app-components/like-button">Like button</a>
 				</h2>
 				<Card>
 					<span>Default:</span>

@@ -1,10 +1,10 @@
 /**
  * External Dependencies
  */
-var React = require( 'react' ),
+var ReactDom = require( 'react-dom' ),
+	React = require( 'react' ),
 	store = require( 'store' ),
-	page = require( 'page' ),
-	querystring = require( 'querystring' );
+	page = require( 'page' );
 
 /**
  * Internal Dependencies
@@ -198,7 +198,7 @@ module.exports = {
 			StatsComponent = NuxInsights;
 		}
 
-		React.render(
+		ReactDom.render(
 			React.createElement( StatsComponent, {
 				site: site,
 				followList: followList,
@@ -219,7 +219,7 @@ module.exports = {
 	},
 
 	overview: function( context, next ) {
-		var StatsComponent = require( 'my-sites/stats/stats-overview' ),
+		var StatsComponent = require( './overview' ),
 			StatsSummaryList = require( 'lib/stats/summary-list' ),
 			filters = function() {
 				return [
@@ -230,7 +230,7 @@ module.exports = {
 				];
 			},
 			activeFilter = false,
-			queryOptions = querystring.parse( context.querystring ),
+			queryOptions = context.query,
 			basePath = route.sectionify( context.path ),
 			statSummaryList,
 			summarySites;
@@ -275,7 +275,7 @@ module.exports = {
 
 			recordVisitDate();
 
-			React.render(
+			ReactDom.render(
 				React.createElement( StatsComponent, {
 					period: activeFilter.period,
 					sites: sites,
@@ -292,7 +292,7 @@ module.exports = {
 		var currentSite,
 			siteId = context.params.site_id,
 			siteFragment = route.getSiteFragment( context.path ),
-			queryOptions = querystring.parse( context.querystring ),
+			queryOptions = context.query,
 			FollowList = require( 'lib/follow-list' ),
 			SiteStatsComponent = require( 'my-sites/stats/site' ),
 			NuxSite = require( 'my-sites/stats/nux/site' ),
@@ -305,10 +305,10 @@ module.exports = {
 			date,
 			charts = function() {
 				return [
-					{ attr: 'views', legendOptions: [ 'visitors' ], className: 'visible', label: i18n.translate( 'Views', { context: 'noun' } ) },
-					{ attr: 'visitors', className: 'user', label: i18n.translate( 'Visitors', { context: 'noun' } ) },
-					{ attr: 'likes', className: 'star', label: i18n.translate( 'Likes', { context: 'noun' } ) },
-					{ attr: 'comments', className: 'comment', label: i18n.translate( 'Comments', { context: 'noun' } ) }
+					{ attr: 'views', legendOptions: [ 'visitors' ], gridicon: 'visible', label: i18n.translate( 'Views', { context: 'noun' } ) },
+					{ attr: 'visitors', gridicon: 'user', label: i18n.translate( 'Visitors', { context: 'noun' } ) },
+					{ attr: 'likes', gridicon: 'star', label: i18n.translate( 'Likes', { context: 'noun' } ) },
+					{ attr: 'comments', gridicon: 'comment', label: i18n.translate( 'Comments', { context: 'noun' } ) }
 				];
 			},
 			chartDate,
@@ -483,7 +483,7 @@ module.exports = {
 				siteComponent = NuxSite;
 			}
 
-			React.render(
+			ReactDom.render(
 				React.createElement( siteComponent, {
 					date: date,
 					charts: charts,
@@ -522,7 +522,7 @@ module.exports = {
 		var site,
 			siteId = context.params.site_id,
 			siteFragment = route.getSiteFragment( context.path ),
-			queryOptions = querystring.parse( context.querystring ),
+			queryOptions = context.query,
 			StatsList = require( 'lib/stats/stats-list' ),
 			FollowList = require( 'lib/follow-list' ),
 			StatsSummaryComponent = require( 'my-sites/stats/summary' ),
@@ -622,7 +622,7 @@ module.exports = {
 				analyticsPageTitle + ' > ' + titlecase( activeFilter.period ) + ' > ' + titlecase( context.params.module )
 			);
 
-			React.render(
+			ReactDom.render(
 				React.createElement( StatsSummaryComponent, {
 					date: date,
 					context: context,
@@ -644,7 +644,7 @@ module.exports = {
 		var site,
 			siteId = context.params.site_id,
 			postId = parseInt( context.params.post_id, 10 ),
-			StatsPostComponent = require( 'my-sites/stats/post' ),
+			StatsPostComponent = require( 'my-sites/stats/stats-post-detail' ),
 			StatsList = require( 'lib/stats/stats-list' ),
 			pathParts = context.path.split( '/' ),
 			postOrPage = pathParts[ 2 ] === 'post' ? 'post' : 'page',
@@ -670,7 +670,7 @@ module.exports = {
 
 			analytics.pageView.record( '/stats/' + postOrPage + '/:post_id/:site', analyticsPageTitle + ' > Single ' + titlecase( postOrPage ) );
 
-			React.render(
+			ReactDom.render(
 				React.createElement( StatsPostComponent, {
 					siteId: siteId,
 					postId: postId,
@@ -737,7 +737,7 @@ module.exports = {
 				analyticsPageTitle + ' > Followers > ' + titlecase( followType )
 			);
 
-			React.render(
+			ReactDom.render(
 				React.createElement( FollowsComponent, {
 					path: context.path,
 					sites: sites,

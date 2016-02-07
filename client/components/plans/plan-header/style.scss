@@ -34,7 +34,7 @@
 	.plan-header {
 		background: $white;
 		width: 100%;
-		padding: 24px 16px;
+		padding: 24px 16px 16px;
 		position: relative;
 		box-sizing: border-box;
 		cursor: pointer;
@@ -80,13 +80,17 @@
 			display: none;
 		}
 	}
+
+	@include breakpoint( "<480px" ) {
+		height: 70px;
+	}
 }
 
 .plans-compare {
 	.plan-header {
 		border-bottom: 2px solid lighten( $gray, 20% );
 		height: 3em;
-		padding: 0 15px 10px 15px;
+		padding: 0 15px 0 15px;
 
 		.plan-header__title {
 			text-align: center;
@@ -140,7 +144,6 @@
 	.plan.card {
 		.plan-header {
 			float: left;
-			height: 70px;
 
 			.plan-header__title {
 				margin: -8px 0 0 0;
@@ -182,4 +185,8 @@
 	@include breakpoint( ">660px" ) {
 		@include plans-in-three-columns();
 	}
+}
+
+.plan-list .jetpack_premium .plan-header__title, .plan-list .jetpack_business .plan-header__title {
+	margin-top: 15px;
 }

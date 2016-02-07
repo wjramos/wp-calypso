@@ -1,7 +1,9 @@
 /**
  * External dependencies
  */
-var React = require( 'react' ),
+var ReactDom = require( 'react-dom' ),
+	ReactDomServer = require( 'react-dom/server' ),
+	React = require( 'react' ),
 	tinymce = require( 'tinymce/tinymce' ),
 	pick = require( 'lodash/object/pick' ),
 	assign = require( 'lodash/object/assign' ),
@@ -30,6 +32,7 @@ var sites = require( 'lib/sites-list' )(),
 	notices = require( 'notices' ),
 	TinyMCEDropZone = require( './drop-zone' ),
 	restrictSize = require( './restrict-size' ),
+	advanced = require( './advanced' ),
 	Gridicon = require( 'components/gridicon' ),
 	config = require( 'config' );
 
@@ -67,7 +70,7 @@ function mediaButton( editor ) {
 			editor.focus( false );
 		}
 
-		React.render(
+		ReactDom.render(
 			<MediaLibrarySelectedData siteId={ selectedSite.ID }>
 				<EditorMediaModal
 					{ ...props }
@@ -85,7 +88,7 @@ function mediaButton( editor ) {
 	function renderDropZone( { visible } ) {
 		if ( ! visible ) {
 			if ( nodes.dropzone ) {
-				React.unmountComponentAtNode( nodes.dropzone );
+				ReactDom.unmountComponentAtNode( nodes.dropzone );
 			}
 			return;
 		}
@@ -100,7 +103,7 @@ function mediaButton( editor ) {
 			editor.getContainer().parentNode.insertBefore( nodes.dropzone, editor.getContainer() );
 		}
 
-		React.render(
+		ReactDom.render(
 			<TinyMCEDropZone
 				editor={ editor }
 				sites={ sites }
@@ -253,9 +256,9 @@ function mediaButton( editor ) {
 		title: i18n.translate( 'Add Media' ),
 
 		onPostRender: function() {
-			this.innerHtml( React.renderToStaticMarkup(
+			this.innerHtml( ReactDomServer.renderToStaticMarkup(
 				<button type="button" role="presentation" tabIndex="-1">
-					<Gridicon icon="image-multiple" size={ 20 } />
+					<Gridicon icon="image-multiple" size={ 20 } nonStandardSize />
 				</button>
 			) );
 		},
@@ -456,6 +459,10 @@ function mediaButton( editor ) {
 		}
 	} );
 
+	editor.addCommand( 'WP_Medialib', () => {
+		renderModal( { visible: true } );
+	} );
+
 	editor.addCommand( 'wpcomEditGallery', function( content ) {
 		const site = sites.getSelectedSite();
 		if ( ! site ) {
@@ -631,7 +638,7 @@ function mediaButton( editor ) {
 
 	editor.on( 'remove', function() {
 		values( nodes ).forEach( function( node ) {
-			React.unmountComponentAtNode( node );
+			ReactDom.unmountComponentAtNode( node );
 			node.parentNode.removeChild( node );
 		} );
 		nodes = {};
@@ -641,6 +648,7 @@ function mediaButton( editor ) {
 	} );
 
 	restrictSize( editor );
+	advanced( editor );
 }
 
 module.exports = function() {

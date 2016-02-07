@@ -1,6 +1,7 @@
 /**
  * External dependencies
  */
+import ReactDom from 'react-dom';
 import React, { PropTypes } from 'react';
 import classNames from 'classnames';
 import debounce from 'lodash/function/debounce';
@@ -17,7 +18,6 @@ import NoResults from './no-results';
 import analytics from 'analytics';
 import Search from './search';
 import TreeConvert from 'lib/tree-convert';
-import postActions from 'lib/posts/actions';
 
 /**
 * Constants
@@ -57,9 +57,7 @@ export default React.createClass( {
 	displayName: 'PostSelectorPosts',
 
 	propTypes: {
-		listId: PropTypes.number,
 		posts: PropTypes.array,
-		postImages: PropTypes.object,
 		page: PropTypes.number,
 		lastPage: PropTypes.bool,
 		loading: PropTypes.bool,
@@ -67,6 +65,8 @@ export default React.createClass( {
 		createLink: PropTypes.string,
 		selected: PropTypes.number,
 		onSearch: PropTypes.func,
+		onChange: PropTypes.func,
+		onNextPage: PropTypes.func,
 		multiple: PropTypes.bool
 	},
 
@@ -81,13 +81,17 @@ export default React.createClass( {
 			analyticsPrefix: 'Post Selector',
 			searchThreshold: 8,
 			loading: true,
-			emptyMessage: ''
+			emptyMessage: '',
+			posts: [],
+			onSearch: () => {},
+			onChange: () => {},
+			onNextPage: () => {}
 		};
 	},
 
 	componentDidMount() {
 		this.checkScrollPosition = throttle( function() {
-			const node = React.findDOMNode( this );
+			const node = ReactDom.findDOMNode( this );
 
 			if ( ( node.scrollTop + node.clientHeight ) >= node.scrollHeight ) {
 				this.maybeFetchNextPage();
@@ -140,7 +144,7 @@ export default React.createClass( {
 		const newSearch = event.target.value;
 
 		if ( this.state.searchTerm && ! newSearch.length ) {
-			this.props.onSearch( null );
+			this.props.onSearch( '' );
 		}
 
 		if ( newSearch !== this.state.searchTerm ) {
@@ -186,7 +190,7 @@ export default React.createClass( {
 			return;
 		}
 
-		postActions.fetchNextPage();
+		this.props.onNextPage();
 	},
 
 	render() {

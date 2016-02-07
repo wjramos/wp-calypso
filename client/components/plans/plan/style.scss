@@ -2,7 +2,6 @@
 	background: $gray-light;
 	box-sizing: border-box;
 	position: relative;
-	float: left;
 	width: 100%;
 	margin: 0 0 15px 0;
 	padding: 0;
@@ -31,7 +30,7 @@
 	.gridicons-checkmark-circle {
 		fill: $alert-green;
 		position: absolute;
-		z-index: 1;
+		z-index: z-index( 'root', '.plan .gridicons-checkmark-circle' );
 		left: 30px;
 		top: 6px;
 	}
@@ -59,13 +58,8 @@
 
 		li {
 			font-size: 13px;
-			padding: 3px 0;
+			padding: 5px 0 5px 14px;
 			opacity: .8;
-
-			&:before {
-				@include noticon( '\f418', 16px );
-				vertical-align: middle;
-			}
 		}
 	}
 
@@ -107,7 +101,6 @@
 
 @mixin plans-in-three-columns() {
 	.plan {
-		width: 32%;
 		margin: 0 2% 15px 0;
 
 		&:last-child {
@@ -133,6 +126,13 @@
 	.plan__plan-details {
 		min-height: 155px;
 	}
+
+	.plan-list {
+		display: flex;
+			flex-direction: row;
+			flex-wrap: nowrap;
+			justify-content: center;
+	}
 }
 
 .plans.has-sidebar {
@@ -153,4 +153,19 @@
 	@include breakpoint( ">660px" ) {
 		@include plans-in-three-columns();
 	}
+}
+
+.plan__feature {
+	padding-left: 10px;
+
+	&.is-plan-specific {
+		font-weight: bold;
+	}
+}
+
+.plan__features .gridicon {
+	margin-left: -12px;
+	position: relative;
+		left: -5px;
+		top: 2px;
 }

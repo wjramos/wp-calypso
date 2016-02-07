@@ -42,18 +42,25 @@ function formatProduct( product ) {
 	} );
 }
 
-function isJpphpBundle( product ) {
-	product = formatProduct( product );
-	assertValidProduct( product );
-
-	return product.product_slug === 'host-bundle';
-}
-
 function isFreePlan( product ) {
 	product = formatProduct( product );
 	assertValidProduct( product );
 
 	return product.product_slug === 'free_plan';
+}
+
+function isFreeJetpackPlan( product ) {
+	product = formatProduct( product );
+	assertValidProduct( product );
+
+	return product.product_slug === 'jetpack_free';
+}
+
+function isFreeTrial( product ) {
+	product = formatProduct( product );
+	assertValidProduct( product );
+
+	return Boolean( product.free_trial );
 }
 
 function isPremium( product ) {
@@ -79,6 +86,20 @@ function isEnterprise( product ) {
 	assertValidProduct( product );
 
 	return product.product_slug === 'wpcom-enterprise';
+}
+
+function isJetpackPlan( product ) {
+	product = formatProduct( product );
+	assertValidProduct( product );
+
+	return 'jetpack' === product.product_type;
+}
+
+function isJpphpBundle( product ) {
+	product = formatProduct( product );
+	assertValidProduct( product );
+
+	return product.product_slug === 'host-bundle';
 }
 
 function isPlan( product ) {
@@ -244,38 +265,33 @@ function isSpaceUpgrade( product ) {
 		'100gb_space_upgrade' === product.product_slug;
 }
 
-function canRemoveFromCart( product ) {
-	if ( isPrivateRegistration( product ) || isCredits( product ) ) {
-		return false;
-	}
-
-	return true;
-}
-
 module.exports = {
-	canRemoveFromCart,
 	formatProduct,
-	isFreePlan: isFreePlan,
-	isPremium: isPremium,
-	isBusiness: isBusiness,
-	isEnterprise: isEnterprise,
-	isPlan: isPlan,
-	isPrivateRegistration,
-	isDomainProduct: isDomainProduct,
-	isDomainRedemption,
-	isDomainRegistration: isDomainRegistration,
-	isDomainMapping: isDomainMapping,
-	isSiteRedirect,
-	isCredits: isCredits,
-	getDomainProductRanking: getDomainProductRanking,
-	isDependentProduct: isDependentProduct,
-	isGoogleApps: isGoogleApps,
-	isTheme,
+	getDomainProductRanking,
+	isBusiness,
+	isCredits,
 	isCustomDesign,
+	isDependentProduct,
+	isDomainMapping,
+	isDomainProduct,
+	isDomainRedemption,
+	isDomainRegistration,
+	isEnterprise,
+	isFreePlan,
+	isFreeJetpackPlan,
+	isFreeTrial,
+	isGoogleApps,
+	isJetpackPlan,
+	isJpphpBundle,
 	isNoAds,
-	isVideoPress,
+	isPlan,
+	isPremium,
+	isPrivateRegistration,
+	isSiteRedirect,
+	isSpaceUpgrade,
+	isTheme,
 	isUnlimitedSpace,
 	isUnlimitedThemes,
-	isSpaceUpgrade,
-	whitelistAttributes: whitelistAttributes
+	isVideoPress,
+	whitelistAttributes
 };

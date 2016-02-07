@@ -11,16 +11,19 @@ import React from 'react';
 import analytics from 'analytics';
 import Button from 'components/button';
 import Card from 'components/card';
+import CompactCard from 'components/card/compact';
 import { cartItems } from 'lib/cart-values';
+import config from 'config';
 import { domainManagementEdit } from 'my-sites/upgrades/paths';
 import { googleAppsSettingsUrl } from 'lib/google-apps';
 import HeaderCake from 'components/header-cake';
 import Main from 'components/main';
+import Notice from 'components/notice';
 import NoticeAction from 'components/notice/notice-action';
-import { oldShowcaseUrl } from 'lib/themes/helpers';
+import { getDetailsUrl as getThemeDetailsUrl } from 'lib/themes/helpers';
 import paths from '../paths';
 import PaymentLogo from 'components/payment-logo';
-import Notice from 'components/notice';
+import RemovePurchase from '../remove-purchase';
 import titles from 'me/purchases/titles';
 import VerticalNavItem from 'components/vertical-nav/item';
 import * as upgradesActions from 'lib/upgrades/actions';
@@ -35,7 +38,6 @@ import {
 	isPaidWithCreditCard,
 	isRedeemable,
 	isRefundable,
-	isRemovable,
 	isRenewable,
 	isRenewing,
 	isIncludedWithPlan,
@@ -43,10 +45,13 @@ import {
 	paymentLogoType,
 	purchaseType,
 	showCreditCardExpiringWarning,
-	showEditPaymentDetails
 } from 'lib/purchases';
 import { getPurchase, getSelectedSite, goToList, isDataLoading, recordPageView } from '../utils';
 import { isDomainProduct, isGoogleApps, isPlan, isSiteRedirect, isTheme } from 'lib/products-values';
+
+function canEditPaymentDetails( purchase ) {
+	return config.isEnabled( 'upgrades/credit-cards' ) && ! isExpired( purchase ) && ! isOneTimePurchase( purchase ) && ! isIncludedWithPlan( purchase );
+}
 
 const ManagePurchase = React.createClass( {
 	propTypes: {
@@ -56,7 +61,8 @@ const ManagePurchase = React.createClass( {
 			React.PropTypes.object,
 			React.PropTypes.bool
 		] ).isRequired,
-		destinationType: React.PropTypes.string
+		destinationType: React.PropTypes.string,
+		user: React.PropTypes.object.isRequired
 	},
 
 	componentWillMount() {
@@ -77,10 +83,6 @@ const ManagePurchase = React.createClass( {
 		recordPageView( 'manage', this.props, nextProps );
 	},
 
-	isDataFetchingAfterRenewal() {
-		return 'thank-you' === this.props.destinationType && this.props.selectedPurchase.isFetching;
-	},
-
 	isDataValid( props = this.props ) {
 		if ( isDataLoading( props ) ) {
 			return true;
@@ -90,7 +92,7 @@ const ManagePurchase = React.createClass( {
 	},
 
 	renderNotices() {
-		if ( isDataLoading( this.props ) || this.isDataFetchingAfterRenewal() ) {
+		if ( isDataLoading( this.props ) ) {
 			return null;
 		}
 
@@ -122,10 +124,20 @@ const ManagePurchase = React.createClass( {
 						}
 					}
 				) }>
-				<NoticeAction onClick={ this.handleRenew }>
-					{ this.translate( 'Renew Now' ) }
-				</NoticeAction>
+				{ this.renderRenewNoticeAction() }
 			</Notice>
+		);
+	},
+
+	renderRenewNoticeAction() {
+		if ( ! config.isEnabled( 'upgrades/checkout' ) ) {
+			return null;
+		}
+
+		return (
+			<NoticeAction onClick={ this.handleRenew }>
+				{ this.translate( 'Renew Now' ) }
+			</NoticeAction>
 		);
 	},
 
@@ -152,7 +164,9 @@ const ManagePurchase = React.createClass( {
 									cardExpiry: creditCard.expiryMoment.format( 'MMMM YYYY' )
 								},
 								components: {
-									a: <a href={ paths.editCardDetails( this.props.selectedSite.slug, id, creditCard.id ) } />
+									a: canEditPaymentDetails( purchase )
+										? <a href={ paths.editCardDetails( this.props.selectedSite.slug, id, creditCard.id ) } />
+										: <span />
 								}
 							}
 						)
@@ -201,17 +215,16 @@ const ManagePurchase = React.createClass( {
 
 	handleRenew() {
 		const purchase = getPurchase( this.props ),
-			cartItem = cartItems.getRenewalItemFromProduct( purchase, {
+			renewItem = cartItems.getRenewalItemFromProduct( purchase, {
 				domain: purchase.meta
-			} );
+			} ),
+			renewItems = [ renewItem ];
 
 		// Track the renew now submit
 		analytics.tracks.recordEvent(
 			'calypso_purchases_renew_now_click',
 			{ product_slug: purchase.productSlug }
 		);
-
-		upgradesActions.addItem( cartItem );
 
 		if ( hasPrivateRegistration( purchase ) ) {
 			const privacyItem = cartItems.getRenewalItemFromCartItem( cartItems.domainPrivacyProtection( {
@@ -221,7 +234,7 @@ const ManagePurchase = React.createClass( {
 				domain: purchase.domain
 			} );
 
-			upgradesActions.addItem( privacyItem );
+			renewItems.push( privacyItem );
 		}
 
 		if ( isRedeemable( purchase ) ) {
@@ -232,8 +245,10 @@ const ManagePurchase = React.createClass( {
 				domain: purchase.domain
 			} );
 
-			upgradesActions.addItem( redemptionItem );
+			renewItems.push( redemptionItem );
 		}
+
+		upgradesActions.addItems( renewItems );
 
 		page( '/checkout/' + this.props.selectedSite.slug );
 	},
@@ -284,7 +299,7 @@ const ManagePurchase = React.createClass( {
 		}
 
 		if ( isTheme( purchase ) ) {
-			url = oldShowcaseUrl + purchase.domain + '/' + purchase.meta;
+			url = getThemeDetailsUrl( { id: purchase.meta }, { slug: purchase.domain } );
 			text = this.translate( 'Theme Details' );
 		}
 
@@ -302,7 +317,7 @@ const ManagePurchase = React.createClass( {
 	renderPaymentInfo() {
 		const purchase = getPurchase( this.props );
 
-		if ( isDataLoading( this.props ) || this.isDataFetchingAfterRenewal() ) {
+		if ( isDataLoading( this.props ) ) {
 			return <span className="manage-purchase__content manage-purchase__detail" />;
 		}
 
@@ -337,23 +352,22 @@ const ManagePurchase = React.createClass( {
 	},
 
 	renderPaymentDetails() {
-		const purchase = getPurchase( this.props ),
-			isLoading = isDataLoading( this.props ) || this.isDataFetchingAfterRenewal();
+		const purchase = getPurchase( this.props );
 
-		if ( ! isLoading && isOneTimePurchase( purchase ) ) {
+		if ( ! isDataLoading( this.props ) && isOneTimePurchase( purchase ) ) {
 			return null;
 		}
 
 		let paymentDetails = (
 			<span>
 				<em className="manage-purchase__content manage-purchase__detail-label">
-					{ isLoading ? null : this.translate( 'Payment method' ) }
+					{ isDataLoading( this.props ) ? null : this.translate( 'Payment method' ) }
 				</em>
 				{ this.renderPaymentInfo() }
 			</span>
 		);
 
-		if ( isLoading || ! showEditPaymentDetails( purchase ) ) {
+		if ( isDataLoading( this.props ) || ! canEditPaymentDetails( purchase ) || ! isPaidWithCreditCard( purchase ) ) {
 			return (
 				<li>
 					{ paymentDetails }
@@ -375,7 +389,7 @@ const ManagePurchase = React.createClass( {
 	renderRenewButton() {
 		const purchase = getPurchase( this.props );
 
-		if ( ! isRenewable( purchase ) || isExpired( purchase ) || isExpiring( purchase ) ) {
+		if ( ! config.isEnabled( 'upgrades/checkout' ) || ! isRenewable( purchase ) || isExpired( purchase ) || isExpiring( purchase ) ) {
 			return null;
 		}
 
@@ -400,9 +414,7 @@ const ManagePurchase = React.createClass( {
 				showDismiss={ false }
 				status="is-error"
 				text={ this.translate( 'This purchase has expired and is no longer in use.' ) }>
-				<NoticeAction onClick={ this.handleRenew }>
-					{ this.translate( 'Renew Now' ) }
-				</NoticeAction>
+				{ this.renderRenewNoticeAction() }
 			</Notice>
 		);
 	},
@@ -453,41 +465,20 @@ const ManagePurchase = React.createClass( {
 		}
 	},
 
-	renderRemovePurchaseInformation() {
-		const purchase = getPurchase( this.props ),
-			contactSupportUrl = 'https://support.wordpress.com/contact/';
-
-		if ( ! isRemovable( purchase ) ) {
-			return null;
-		}
-
-		return (
-			<div className="manage-purchase__remove-box">
-				<em className="manage-purchase__content manage-purchase__remove-text">{ this.translate(
-					'{{strong}}Looking to remove this purchase?{{/strong}} Please {{a}}contact support{{/a}} to remove %(purchaseName)s from your account.',
-					{
-						args: {
-							purchaseName: getName( purchase )
-						},
-						components: {
-							a: <a href={ contactSupportUrl } target="_blank" />,
-							strong: <strong />
-						}
-					}
-				) }</em>
-			</div>
-		);
-	},
-
 	renderEditPaymentMethodNavItem() {
 		const purchase = getPurchase( this.props ),
 			{ id, payment } = purchase;
 
-		if ( showEditPaymentDetails( purchase ) ) {
+		let path = paths.editCardDetails( this.props.selectedSite.slug, id );
+		if ( isPaidWithCreditCard( purchase ) ) {
+			path = paths.editSpecificCardDetails( this.props.selectedSite.slug, id, payment.creditCard.id );
+		}
+
+		if ( canEditPaymentDetails( purchase ) ) {
 			return (
-				<VerticalNavItem path={ paths.editCardDetails( this.props.selectedSite.slug, id, payment.creditCard.id ) }>
+				<CompactCard href={ path }>
 					{ this.translate( 'Edit Payment Method' ) }
-				</VerticalNavItem>
+				</CompactCard>
 			);
 		}
 
@@ -507,13 +498,13 @@ const ManagePurchase = React.createClass( {
 		};
 
 		return (
-			<VerticalNavItem path={ paths.cancelPurchase( this.props.selectedSite.slug, id ) }>
+			<CompactCard href={ paths.cancelPurchase( this.props.selectedSite.slug, id ) }>
 				{
 					isRefundable( purchase )
 					? this.translate( 'Cancel and Refund %(purchaseName)s', translateArgs )
 					: this.translate( 'Cancel %(purchaseName)s', translateArgs )
 				}
-			</VerticalNavItem>
+			</CompactCard>
 		);
 	},
 
@@ -526,9 +517,9 @@ const ManagePurchase = React.createClass( {
 		}
 
 		return (
-			<VerticalNavItem path={ paths.cancelPrivateRegistration( this.props.selectedSite.slug, id ) }>
+			<CompactCard href={ paths.cancelPrivateRegistration( this.props.selectedSite.slug, id ) }>
 				{ this.translate( 'Cancel Private Registration' ) }
-			</VerticalNavItem>
+			</CompactCard>
 		);
 	},
 
@@ -544,14 +535,13 @@ const ManagePurchase = React.createClass( {
 			price,
 			renewsOrExpiresOnLabel,
 			renewsOrExpiresOn,
-			removePurchaseInformation,
 			renewButton,
 			expiredRenewNotice,
 			editPaymentMethodNavItem,
 			cancelPurchaseNavItem,
 			cancelPrivateRegistrationNavItem;
 
-		if ( isDataLoading( this.props ) || this.isDataFetchingAfterRenewal() ) {
+		if ( isDataLoading( this.props ) ) {
 			classes = 'manage-purchase__info is-placeholder';
 			editPaymentMethodNavItem = <VerticalNavItem isPlaceholder />;
 			cancelPurchaseNavItem = <VerticalNavItem isPlaceholder />;
@@ -569,7 +559,6 @@ const ManagePurchase = React.createClass( {
 			price = this.renderPrice();
 			renewsOrExpiresOnLabel = this.renderRenewsOrExpiresOnLabel();
 			renewsOrExpiresOn = this.renderRenewsOrExpiresOn();
-			removePurchaseInformation = this.renderRemovePurchaseInformation();
 			renewButton = this.renderRenewButton();
 			expiredRenewNotice = this.renderExpiredRenewNotice();
 			editPaymentMethodNavItem = this.renderEditPaymentMethodNavItem();
@@ -589,6 +578,7 @@ const ManagePurchase = React.createClass( {
 							{ productLink }
 						</span>
 					</header>
+
 					<ul className="manage-purchase__meta">
 						<li>
 							<em className="manage-purchase__content manage-purchase__detail-label">
@@ -604,15 +594,19 @@ const ManagePurchase = React.createClass( {
 						</li>
 						{ this.renderPaymentDetails() }
 					</ul>
-					{ removePurchaseInformation }
+
 					{ renewButton }
 				</Card>
 
 				{ expiredRenewNotice }
-
 				{ editPaymentMethodNavItem }
 				{ cancelPurchaseNavItem }
 				{ cancelPrivateRegistrationNavItem }
+
+				<RemovePurchase
+					selectedSite={ this.props.selectedSite }
+					selectedPurchase={ this.props.selectedPurchase }
+					user={ this.props.user } />
 			</div>
 		);
 	},

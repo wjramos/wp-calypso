@@ -1,7 +1,8 @@
 /**
  * External Dependencies
  */
-const React = require( 'react' ),
+const ReactDom = require( 'react-dom' ),
+	React = require( 'react' ),
 	classnames = require( 'classnames' ),
 	autosize = require( 'autosize' ),
 	forEach = require( 'lodash/collection/forEach' ),
@@ -23,19 +24,39 @@ require( 'tinymce/plugins/textcolor/plugin.js' );
 require( './plugins/wptextpattern/plugin.js' );
 
 // TinyMCE plugins that we've forked or written ourselves
-require( './plugins/wpcom/plugin.js' )();
-require( './plugins/wpcom-autoresize/plugin.js' )();
-require( './plugins/wpcom-help/plugin.js' )();
-require( './plugins/wpcom-charmap/plugin.js' )();
-require( './plugins/wpcom-view/plugin.js' )();
-require( './plugins/wpeditimage/plugin.js' )();
-require( './plugins/wplink/plugin.js' )();
-require( './plugins/media/plugin' )();
-require( './plugins/advanced/plugin' )();
-require( './plugins/wpcom-tabindex/plugin' )();
-require( './plugins/touch-scroll-toolbar/plugin' )();
-require( './plugins/editor-button-analytics/plugin' )();
-require( './plugins/calypso-alert/plugin' )();
+import wpcomPlugin from './plugins/wpcom/plugin.js';
+import wpcomAutoresizePlugin from './plugins/wpcom-autoresize/plugin.js';
+import wpcomHelpPlugin from './plugins/wpcom-help/plugin.js';
+import wpcomCharmapPlugin from './plugins/wpcom-charmap/plugin.js';
+import wpcomViewPlugin from './plugins/wpcom-view/plugin.js';
+import wpcomSourcecode from './plugins/wpcom-sourcecode/plugin';
+import wpeditimagePlugin from './plugins/wpeditimage/plugin.js';
+import wplinkPlugin from './plugins/wplink/plugin.js';
+import mediaPlugin from './plugins/media/plugin';
+import advancedPlugin from './plugins/advanced/plugin';
+import wpcomTabindexPlugin from './plugins/wpcom-tabindex/plugin';
+import touchScrollToolbarPlugin from './plugins/touch-scroll-toolbar/plugin';
+import editorButtonAnalyticsPlugin from './plugins/editor-button-analytics/plugin';
+import calypsoAlertPlugin from './plugins/calypso-alert/plugin';
+import contactFormPlugin from './plugins/contact-form/plugin';
+
+[
+	wpcomPlugin,
+	wpcomAutoresizePlugin,
+	wpcomHelpPlugin,
+	wpcomCharmapPlugin,
+	wpcomViewPlugin,
+	wpcomSourcecode,
+	wpeditimagePlugin,
+	wplinkPlugin,
+	mediaPlugin,
+	advancedPlugin,
+	wpcomTabindexPlugin,
+	touchScrollToolbarPlugin,
+	editorButtonAnalyticsPlugin,
+	calypsoAlertPlugin,
+	contactFormPlugin
+].forEach( ( initializePlugin ) => initializePlugin() );
 
 /**
  * Internal Dependencies
@@ -43,8 +64,8 @@ require( './plugins/calypso-alert/plugin' )();
 const formatting = require( 'lib/formatting' ),
 	user = require( 'lib/user' )(),
 	i18n = require( './i18n' ),
-	hasTouch = require( 'lib/touch-detect' ).hasTouch,
-	viewport = require( 'lib/viewport' );
+	viewport = require( 'lib/viewport' ),
+	config = require( 'config' );
 
 /**
  * Internal Variables
@@ -95,6 +116,8 @@ const PLUGINS = [
 	'wpcom/editorbuttonanalytics',
 	'wpcom/calypsoalert',
 	'wpcom/tabindex',
+	'wpcom/contactform',
+	'wpcom/sourcecode',
 ];
 
 const CONTENT_CSS = [
@@ -128,6 +151,10 @@ module.exports = React.createClass( {
 		onTextEditorChange: React.PropTypes.func,
 		onKeyUp: React.PropTypes.func,
 		onTogglePin: React.PropTypes.func
+	},
+
+	contextTypes: {
+		store: React.PropTypes.object
 	},
 
 	getDefaultProps: function() {
@@ -170,13 +197,18 @@ module.exports = React.createClass( {
 			this.bindEditorEvents();
 			editor.on( 'SetTextAreaContent', ( event ) => this.setTextAreaContent( event.content ) );
 
-			if ( ! hasTouch() ) {
-				window.addEventListener( 'scroll', this.onScrollPinTools );
+			window.addEventListener( 'scroll', this.onScrollPinTools );
+			if ( ! viewport.isMobile() ) {
 				editor.once( 'PostRender', this.toggleEditor.bind( this, { autofocus: ! this.props.isNew } ) );
 			}
 		}.bind( this );
 
 		this.localize();
+
+		let toolbar1 = [ 'wpcom_add_media', 'formatselect', 'bold', 'italic', 'bullist', 'numlist', 'link', 'blockquote', 'alignleft', 'aligncenter', 'alignright', 'spellchecker', 'wp_more', 'wpcom_advanced' ];
+		if ( config.isEnabled( 'post-editor/contact-form' ) ) {
+			toolbar1.splice( 1, 0, 'wpcom_add_contact_form' );
+		}
 
 		tinymce.init( {
 			selector: '#' + this._id,
@@ -228,18 +260,23 @@ module.exports = React.createClass( {
 			entity_encoding: 'raw',
 			keep_styles: false,
 			wpeditimage_html5_captions: true,
+			redux_store: this.context.store,
 
 			// Limit the preview styles in the menu/toolbar
 			preview_styles: 'font-family font-size font-weight font-style text-decoration text-transform',
 			end_container_on_empty_block: true,
-			plugins: PLUGINS.join( ',' ),
+			plugins: PLUGINS.join(),
 			statusbar: false,
 			resize: false,
 			menubar: false,
 			indent: false,
 
-			autoresize_min_height: document.documentElement.clientHeight,
-			toolbar1: 'wpcom_add_media,formatselect,bold,italic,bullist,numlist,link,blockquote,alignleft,aligncenter,alignright,spellchecker,wp_more,wpcom_advanced',
+			// Try to find a suitable minimum size based on the viewport height
+			// minus the surrounding editor chrome to avoid scrollbars. In the
+			// future, we should calculate from the rendered editor bounds.
+			autoresize_min_height: Math.max( document.documentElement.clientHeight - 300, 300 ),
+
+			toolbar1: toolbar1.join(),
 			toolbar2: 'strikethrough,underline,hr,alignjustify,forecolor,pastetext,removeformat,wp_charmap,outdent,indent,undo,redo,wp_help',
 			toolbar3: '',
 			toolbar4: '',
@@ -253,7 +290,7 @@ module.exports = React.createClass( {
 
 		} );
 
-		autosize( React.findDOMNode( this.refs.text ) );
+		autosize( ReactDom.findDOMNode( this.refs.text ) );
 	},
 
 	componentWillUnmount: function() {
@@ -266,11 +303,11 @@ module.exports = React.createClass( {
 		window.removeEventListener( 'scroll', this.onScrollPinTools );
 		tinymce.remove( this._editor );
 		this._editor = null;
-		autosize.destroy( React.findDOMNode( this.refs.text ) );
+		autosize.destroy( ReactDom.findDOMNode( this.refs.text ) );
 	},
 
 	doAutosizeUpdate: function() {
-		autosize.update( React.findDOMNode( this.refs.text ) );
+		autosize.update( ReactDom.findDOMNode( this.refs.text ) );
 	},
 
 	bindEditorEvents: function( prevProps ) {
@@ -288,9 +325,7 @@ module.exports = React.createClass( {
 	},
 
 	onScrollPinTools: function() {
-		const editor = this._editor,
-			$ = editor.$;
-
+		const editor = this._editor;
 		if ( ! editor || this.props.mode === 'html' ) {
 			return;
 		}
@@ -298,38 +333,19 @@ module.exports = React.createClass( {
 		const container = editor.getContainer();
 		const rect = container.getBoundingClientRect();
 
-		if ( rect.top < 46 && ! this._pinned && viewport.isWithinBreakpoint( '>660px' ) ) {
-			this._pinned = true;
-			const toolbar = $( '.mce-toolbar-grp:not(.mce-inline-toolbar-grp)', container ).first();
-			const toolbarComputedStyle = window.getComputedStyle( toolbar[ 0 ] );
-			const toolbarWidth = toolbar[ 0 ].parentNode.clientWidth - parseInt( toolbarComputedStyle.marginLeft, 10 ) - parseInt( toolbarComputedStyle.marginRight, 10 );
+		let newPinned;
+		if ( ! this._pinned && rect.top < 46 && viewport.isWithinBreakpoint( '>660px' ) ) {
+			newPinned = true;
+		} else if ( this._pinned && window.pageYOffset < 164 ) {
+			newPinned = false;
+		} else {
+			return;
+		}
 
-			toolbar.css( {
-				boxSizing: 'border-box',
-				position: 'fixed',
-				top: '46px',
-				left: 'auto',
-				right: 'auto',
-				width: toolbarWidth + 'px',
-				'z-index': 20
-			} );
-
-			if ( this.props.onTogglePin ) {
-				this.props.onTogglePin( 'pin' );
-			}
-		} else if ( window.pageYOffset < 164 && this._pinned ) {
-			this._pinned = false;
-			$( '.mce-toolbar-grp:not(.mce-inline-toolbar-grp)', container ).first().css( {
-				position: 'absolute',
-				top: 0,
-				left: 0,
-				right: 0,
-				width: 'auto',
-				'z-index': 'auto'
-			} );
-			if ( this.props.onTogglePin ) {
-				this.props.onTogglePin( 'unpin' );
-			}
+		this._pinned = newPinned;
+		editor.dom.toggleClass( editor.getContainer(), 'is-pinned', newPinned );
+		if ( this.props.onTogglePin ) {
+			this.props.onTogglePin( newPinned ? 'pin' : 'unpin' );
 		}
 	},
 
@@ -355,7 +371,7 @@ module.exports = React.createClass( {
 
 	focusEditor: function() {
 		if ( this.props.mode === 'html' ) {
-			const textNode = React.findDOMNode( this.refs.text );
+			const textNode = ReactDom.findDOMNode( this.refs.text );
 
 			// Collapse selection to avoid scrolling to the bottom of the textarea
 			textNode.setSelectionRange( 0, 0 );

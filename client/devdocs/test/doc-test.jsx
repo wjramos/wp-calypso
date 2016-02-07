@@ -5,10 +5,11 @@ require( 'lib/react-test-env-setup' )();
  */
 var chai = require( 'chai' ),
 	expect = chai.expect,
-	React = require( 'react/addons' ),
+	ReactDom = require( 'react-dom' ),
+	React = require( 'react' ),
 	sinon = require( 'sinon' ),
 	mockery = require( 'mockery' ),
-	TestUtils = React.addons.TestUtils;
+	TestUtils = require( 'react-addons-test-utils' );
 
 describe( 'SingleDoc', function () {
 
@@ -51,7 +52,7 @@ describe( 'SingleDoc', function () {
 			it( 'should render html with marked text', function () {
 				this.rendered.setState( { body: this.fetchResponse } );
 				this.rendered.render();
-				var html = React.findDOMNode( this.rendered.refs.body ).innerHTML;
+				var html = ReactDom.findDOMNode( this.rendered.refs.body ).innerHTML;
 				expect( html ).to.equal( '<div><p>something <mark>hello</mark></p></div>' );
 			} );
 		} );
@@ -59,4 +60,3 @@ describe( 'SingleDoc', function () {
 	} );
 
 } );
-

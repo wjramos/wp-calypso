@@ -1,7 +1,9 @@
 /**
  * External dependencies
  */
-import React, { PropTypes } from 'react/addons';
+import ReactDom from 'react-dom';
+import React, { PropTypes } from 'react';
+import PureRenderMixin from 'react-pure-render/mixin';
 import classNames from 'classnames';
 import noop from 'lodash/utility/noop';
 
@@ -16,7 +18,7 @@ import { recordStat, recordEvent } from 'lib/posts/stats';
 export default React.createClass( {
 	displayName: 'PostEditorSlug',
 
-	mixins: [ React.addons.PureRenderMixin ],
+	mixins: [ PureRenderMixin ],
 
 	propTypes: {
 		path: PropTypes.string,
@@ -51,7 +53,7 @@ export default React.createClass( {
 				this.props.onEscEnter();
 
 				if ( this.props.isEditable ) {
-					React.findDOMNode( this.refs.slugField ).blur();
+					ReactDom.findDOMNode( this.refs.slugField ).blur();
 				}
 			} );
 		}
@@ -69,7 +71,7 @@ export default React.createClass( {
 
 	focusSlug() {
 		if ( this.props.isEditable ) {
-			React.findDOMNode( this.refs.slugField ).focus();
+			ReactDom.findDOMNode( this.refs.slugField ).focus();
 		}
 	},
 

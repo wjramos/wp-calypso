@@ -13,7 +13,10 @@ var Gravatar = require( 'components/gravatar' ),
 	PostCommentForm = require( './form' ),
 	CommentLikeButtonContainer = require( './comment-likes' ),
 	stats = require( 'reader/stats' ),
-	PostCommentContent = require( './post-comment-content' );
+	PostCommentContent = require( './post-comment-content' ),
+	Gridicon = require( 'components/gridicon' );
+
+import { decodeEntities } from 'lib/formatting';
 
 var PostComment = React.createClass( {
 
@@ -73,6 +76,17 @@ var PostComment = React.createClass( {
 		this.props.onReplyClick( comment.ID );
 	},
 
+	recordAuthorClick: function() {
+		stats.recordAction( 'comment_author_click' );
+		stats.recordGaEvent( 'Clicked Author Name' );
+		stats.recordTrack( 'calypso_reader_comment_author_click', {
+			blog_id: this.props.post.site_ID,
+			post_id: this.props.post.ID,
+			comment_id: this.props.comment.ID,
+			author_url: this.props.comment.author.URL
+		} );
+	},
+
 	renderCommentForm: function() {
 		var post = this.props.post,
 			comment = this.props.comment,
@@ -112,7 +126,12 @@ var PostComment = React.createClass( {
 
 		return (
 			<div className="comment__actions">
-				{ showReplyButton ? <button className="comment__actions-reply" onClick={ this.handleReply }>Reply</button> : null }
+				{ showReplyButton ?
+					<button className="comment__actions-reply" onClick={ this.handleReply }>
+						<Gridicon icon="reply" size="18" />
+						<span className="comment__actions-reply-label">Reply</span>
+					</button>
+				: null }
 				{ showCancelReplyButton ? <button className="comment__actions-cancel-reply" onClick={ onReplyCancel }>Cancel reply</button> : null }
 				<CommentLikeButtonContainer className="comment__actions-like" tagName="button" siteId={ this.props.post.site_ID } commentId={ comment.ID } />
 				<span className="comment__actions-like-count">{ comment.like_count ? comment.like_count : null } likes</span>
@@ -128,6 +147,8 @@ var PostComment = React.createClass( {
 		if ( comment.state && comment.state === CommentStates.PENDING ) {
 			comment.author = User;
 			comment.author.name = User.display_name;
+		} else {
+			comment.author.name = decodeEntities( comment.author.name );
 		}
 
 		// If we have an error, render the error component instead
@@ -139,7 +160,10 @@ var PostComment = React.createClass( {
 			<li className={ 'comment depth-' + this.props.depth }>
 				<div className="comment__author">
 					<Gravatar user={ comment.author } />
-					<strong className="comment__username">{ comment.author.name }</strong>
+
+					{ comment.author.URL
+						? <a href={ comment.author.URL } target="_blank" className="comment__username" onClick={ this.recordAuthorClick }>{ comment.author.name }<Gridicon icon="external" /></a>
+						: <strong className="comment__username">{ comment.author.name }</strong> }
 					<small className="comment__timestamp">
 						<a href={ comment.URL }>
 							<PostTime date={ comment.date } />
@@ -222,6 +246,10 @@ var PostCommentList = React.createClass( {
 		CommentStore.on( 'add', this._onAdd );
 	},
 
+	componentDidUpdate: function() {
+		this.props.onCommentsUpdate();
+	},
+
 	// Remove change listers from stores
 	componentWillUnmount: function() {
 		CommentStore.off( 'change', this._onChange );
@@ -290,12 +318,22 @@ var PostCommentList = React.createClass( {
 
 	onReplyClick: function( commentID ) {
 		this.setState( { activeReplyCommentID: commentID } );
+		stats.recordAction( 'comment_reply_click' );
 		stats.recordGaEvent( 'Clicked Reply to Comment' );
+		stats.recordTrack( 'calypso_reader_comment_reply_click', {
+			blog_id: this.props.post.site_ID,
+			comment_id: commentID
+		} );
 	},
 
 	onReplyCancel: function() {
-		this.setState( { activeReplyCommentID: 0 } );
+		stats.recordAction( 'comment_reply_cancel_click' );
 		stats.recordGaEvent( 'Clicked Cancel Reply to Comment' );
+		stats.recordTrack( 'calypso_reader_comment_reply_cancel_click', {
+			blog_id: this.props.post.site_ID,
+			comment_id: this.state.activeReplyCommentID
+		} );
+		this.setState( { activeReplyCommentID: 0 } );
 	},
 
 	onUpdateCommentText: function( commentText ) {

@@ -177,6 +177,7 @@ var RegisterDomainStep = React.createClass( {
 					placeholder={ this.translate( 'Enter a domain or keyword', { textOnly: true } ) }
 					autoFocus={ true }
 					delaySearch={ true }
+					delayTimeout={ 2000 }
 				/>
 			</div>
 		);
@@ -220,7 +221,7 @@ var RegisterDomainStep = React.createClass( {
 		async.parallel(
 			[
 				callback => {
-					if ( domain.indexOf( '.' ) < 0 ) {
+					if ( ! domain.match( /.{3,}\..{2,}/ ) || domain.match( /\.wordpress\.com/i ) ) {
 						return callback();
 					}
 
@@ -416,6 +417,12 @@ var RegisterDomainStep = React.createClass( {
 
 			case 'empty_query':
 				message = this.translate( 'Please enter a domain name or keyword.' );
+				break;
+
+			case 'empty_results':
+				message = this.translate( "We couldn't find any available domains for: %(domain)s", {
+					args: { domain }
+				} );
 				break;
 
 			case 'invalid_query':

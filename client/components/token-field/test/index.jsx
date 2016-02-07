@@ -4,8 +4,9 @@ require( 'lib/react-test-env-setup' )();
  * External dependencies
  */
 var expect = require( 'chai' ).expect,
-	React = require( 'react/addons' ),
-	TestUtils = React.addons.TestUtils;
+	ReactDom = require( 'react-dom' ),
+	React = require( 'react' ),
+	TestUtils = require( 'react-addons-test-utils' );
 
 /**
  * Internal dependencies
@@ -28,17 +29,27 @@ var keyCodes = {
 	comma: 188
 };
 
+var charCodes = {
+	comma: 44
+};
+
 describe( 'TokenField', function() {
-	var wrapper, tokenFieldNode, textInputNode;
+	var reactContainer, wrapper, tokenFieldNode, textInputNode;
 
 	function setText( text ) {
 		TestUtils.Simulate.change( textInputNode, { target: { value: text } } );
 	}
 
-	function sendKey( keyCode, shiftKey ) {
+	function sendKeyDown( keyCode, shiftKey ) {
 		TestUtils.Simulate.keyDown( textInputNode, {
 			keyCode: keyCode,
 			shiftKey: !! shiftKey
+		} );
+	}
+
+	function sendKeyPress( charCode ) {
+		TestUtils.Simulate.keyPress( textInputNode, {
+			charCode: charCode
 		} );
 	}
 
@@ -75,15 +86,20 @@ describe( 'TokenField', function() {
 		return selectedSuggestions[0] || null;
 	}
 
+	before( function() {
+		reactContainer = document.createElement( 'div' );
+		document.body.appendChild( reactContainer );
+	} );
+
 	beforeEach( function() {
-		wrapper = React.render( <TokenFieldWrapper />, document.body );
-		tokenFieldNode = React.findDOMNode( wrapper.refs.tokenField );
+		wrapper = ReactDom.render( <TokenFieldWrapper />, reactContainer );
+		tokenFieldNode = ReactDom.findDOMNode( wrapper.refs.tokenField );
 		textInputNode = tokenFieldNode.querySelector( '.token-field__input' );
 		TestUtils.Simulate.focus( textInputNode );
 	} );
 
 	afterEach( function() {
-		React.unmountComponentAtNode( document.body );
+		ReactDom.unmountComponentAtNode( reactContainer );
 	} );
 
 	describe( 'displaying tokens', function() {
@@ -169,14 +185,19 @@ describe( 'TokenField', function() {
 			expect( getSuggestionsHTML() ).to.deep.equal( fixtures.specialSuggestions.matchAmpersandEscaped );
 		} );
 
+		it( 'should match suggestions even with trailing spaces', function() {
+			setText( '  at  ' );
+			expect( getSuggestionsHTML() ).to.deep.equal( fixtures.matchingSuggestions.at );
+		} );
+
 		it( 'should manage the selected suggestion based on both keyboard and mouse events', function( done ) {
 			var hoverSuggestion;
 			setText( 't' );
 			expect( getSuggestionsHTML() ).to.deep.equal( fixtures.matchingSuggestions.t );
 			expect( getSelectedSuggestion() ).to.equal( null );
-			sendKey( keyCodes.downArrow ); // 'the'
+			sendKeyDown( keyCodes.downArrow ); // 'the'
 			expect( getSelectedSuggestion() ).to.deep.equal( [ '', 't', 'he' ] );
-			sendKey( keyCodes.downArrow ); // 'to'
+			sendKeyDown( keyCodes.downArrow ); // 'to'
 			expect( getSelectedSuggestion() ).to.deep.equal( [ '', 't', 'o' ] );
 			hoverSuggestion = tokenFieldNode.querySelectorAll( '.token-field__suggestion' )[5]; // 'it'
 			expect( getSuggestionNodeHTML( hoverSuggestion ) ).to.deep.equal( [ 'i', 't', '' ] );
@@ -189,9 +210,9 @@ describe( 'TokenField', function() {
 				// this would happen in a real browser but doesn't seem to be needed here
 				// TestUtils.SimulateNative.mouseOver( hoverSuggestion, { relatedTarget: textInputNode } );
 				expect( getSelectedSuggestion() ).to.deep.equal( [ 'i', 't', '' ] );
-				sendKey( keyCodes.upArrow );
+				sendKeyDown( keyCodes.upArrow );
 				expect( getSelectedSuggestion() ).to.deep.equal( [ 'wi', 't', 'h' ] );
-				sendKey( keyCodes.upArrow );
+				sendKeyDown( keyCodes.upArrow );
 				expect( getSelectedSuggestion() ).to.deep.equal( [ '', 't', 'his' ] );
 				TestUtils.Simulate.click( hoverSuggestion );
 				expect( getSelectedSuggestion() ).to.equal( null );
@@ -206,59 +227,71 @@ describe( 'TokenField', function() {
 
 		it( 'should add a token when Tab pressed', function() {
 			setText( 'baz' );
-			sendKey( keyCodes.tab );
+			sendKeyDown( keyCodes.tab );
 			expect( wrapper.state.tokens ).to.deep.equal( [ 'foo', 'bar', 'baz' ] );
 			expect( textInputNode.value ).to.equal( '' );
 		} );
 
 		it( 'should not allow adding blank tokens with Tab', function() {
-			sendKey( keyCodes.tab );
+			sendKeyDown( keyCodes.tab );
 			expect( wrapper.state.tokens ).to.deep.equal( [ 'foo', 'bar' ] );
 		} );
 
 		it( 'should not allow adding whitespace tokens with Tab', function() {
 			setText( '   ' );
-			sendKey( keyCodes.tab );
+			sendKeyDown( keyCodes.tab );
 			expect( wrapper.state.tokens ).to.deep.equal( [ 'foo', 'bar' ] );
 		} );
 
 		it( 'should add a token when Enter pressed', function() {
 			setText( 'baz' );
-			sendKey( keyCodes.enter );
+			sendKeyDown( keyCodes.enter );
 			expect( wrapper.state.tokens ).to.deep.equal( [ 'foo', 'bar', 'baz' ] );
 			expect( textInputNode.value ).to.equal( '' );
 		} );
 
 		it( 'should not allow adding blank tokens with Enter', function() {
-			sendKey( keyCodes.enter );
+			sendKeyDown( keyCodes.enter );
 			expect( wrapper.state.tokens ).to.deep.equal( [ 'foo', 'bar' ] );
 		} );
 
 		it( 'should not allow adding whitespace tokens with Enter', function() {
 			setText( '   ' );
-			sendKey( keyCodes.enter );
+			sendKeyDown( keyCodes.enter );
+			expect( wrapper.state.tokens ).to.deep.equal( [ 'foo', 'bar' ] );
+		} );
+
+		it( 'should not allow adding whitespace tokens with comma', function() {
+			setText( '   ' );
+			sendKeyPress( charCodes.comma );
 			expect( wrapper.state.tokens ).to.deep.equal( [ 'foo', 'bar' ] );
 		} );
 
 		it( 'should add a token when comma pressed', function() {
 			setText( 'baz' );
-			sendKey( keyCodes.comma );
+			sendKeyPress( charCodes.comma );
 			expect( wrapper.state.tokens ).to.deep.equal( [ 'foo', 'bar', 'baz' ] );
 		} );
 
 		it( 'should not add a token when < pressed', function() {
 			setText( 'baz' );
-			sendKey( keyCodes.comma, true );
+			sendKeyDown( keyCodes.comma, true );
 			expect( wrapper.state.tokens ).to.deep.equal( [ 'foo', 'bar' ] );
 			// The text input does not register the < keypress when it is sent this way.
 			expect( textInputNode.value ).to.equal( 'baz' );
 		} );
 
+		it( 'should trim token values when adding', function() {
+			setText( '  baz  ' );
+			sendKeyDown( keyCodes.enter );
+			expect( wrapper.state.tokens ).to.deep.equal( [ 'foo', 'bar', 'baz' ] );
+		} );
+
 		function testOnBlur( initialText, selectSuggestion, expectedSuggestion, expectedTokens, done ) {
 			setText( initialText );
 			if ( selectSuggestion ) {
-				sendKey( keyCodes.downArrow ); // 'the'
-				sendKey( keyCodes.downArrow ); // 'to'
+				sendKeyDown( keyCodes.downArrow ); // 'the'
+				sendKeyDown( keyCodes.downArrow ); // 'to'
 			}
 			expect( getSelectedSuggestion() ).to.deep.equal( expectedSuggestion );
 
@@ -269,6 +302,7 @@ describe( 'TokenField', function() {
 				expect( wrapper.refs.tokenField.state.isActive ).to.equal( isActive );
 			}
 
+			document.activeElement = document.body;
 			TestUtils.Simulate.blur( textInputNode );
 			setTimeout( function() {
 				// After blur, need to wait for TokenField#_blurTimeoutID
@@ -335,23 +369,34 @@ describe( 'TokenField', function() {
 			}, 50 ); // 50ms is a fast click
 		} );
 
+		it( 'should not lose focus when a suggestion is clicked', function( done ) {
+			// prevents regression of https://github.com/Automattic/wp-calypso/issues/1884
+			TestUtils.Simulate.blur( textInputNode, {
+				relatedTarget: tokenFieldNode.querySelector( '.token-field__suggestion' )
+			} );
+			setTimeout( function() {
+				expect( wrapper.refs.tokenField.state.isActive ).to.equal( true );
+				done();
+			}, 10 ); // wait for setState call
+		} );
+
 		it( 'should add tokens in the middle of the current tokens', function() {
-			sendKey( keyCodes.leftArrow );
+			sendKeyDown( keyCodes.leftArrow );
 			setText( 'baz' );
-			sendKey( keyCodes.tab );
+			sendKeyDown( keyCodes.tab );
 			setText( 'quux' );
-			sendKey( keyCodes.tab );
+			sendKeyDown( keyCodes.tab );
 			expect( wrapper.state.tokens ).to.deep.equal( [ 'foo', 'baz', 'quux', 'bar' ] );
 		} );
 
 		it( 'should add tokens from the selected matching suggestion using Tab', function() {
 			setText( 't' );
 			expect( getSelectedSuggestion() ).to.equal( null );
-			sendKey( keyCodes.downArrow ); // 'the'
+			sendKeyDown( keyCodes.downArrow ); // 'the'
 			expect( getSelectedSuggestion() ).to.deep.equal( [ '', 't', 'he' ] );
-			sendKey( keyCodes.downArrow ); // 'to'
+			sendKeyDown( keyCodes.downArrow ); // 'to'
 			expect( getSelectedSuggestion() ).to.deep.equal( [ '', 't', 'o' ] );
-			sendKey( keyCodes.tab );
+			sendKeyDown( keyCodes.tab );
 			expect( wrapper.state.tokens ).to.deep.equal( [ 'foo', 'bar', 'to' ] );
 			expect( getSelectedSuggestion() ).to.equal( null );
 		} );
@@ -359,33 +404,33 @@ describe( 'TokenField', function() {
 		it( 'should add tokens from the selected matching suggestion using Enter', function() {
 			setText( 't' );
 			expect( getSelectedSuggestion() ).to.equal( null );
-			sendKey( keyCodes.downArrow ); // 'the'
+			sendKeyDown( keyCodes.downArrow ); // 'the'
 			expect( getSelectedSuggestion() ).to.deep.equal( [ '', 't', 'he' ] );
-			sendKey( keyCodes.downArrow ); // 'to'
+			sendKeyDown( keyCodes.downArrow ); // 'to'
 			expect( getSelectedSuggestion() ).to.deep.equal( [ '', 't', 'o' ] );
-			sendKey( keyCodes.enter );
+			sendKeyDown( keyCodes.enter );
 			expect( wrapper.state.tokens ).to.deep.equal( [ 'foo', 'bar', 'to' ] );
 			expect( getSelectedSuggestion() ).to.equal( null );
 		} );
 
 		it( 'should add tokens from the selected suggestion using Tab', function() {
 			expect( getSelectedSuggestion() ).to.equal( null );
-			sendKey( keyCodes.downArrow ); // 'the'
+			sendKeyDown( keyCodes.downArrow ); // 'the'
 			expect( getSelectedSuggestion() ).to.equal( 'the' );
-			sendKey( keyCodes.downArrow ); // 'of'
+			sendKeyDown( keyCodes.downArrow ); // 'of'
 			expect( getSelectedSuggestion() ).to.equal( 'of' );
-			sendKey( keyCodes.tab );
+			sendKeyDown( keyCodes.tab );
 			expect( wrapper.state.tokens ).to.deep.equal( [ 'foo', 'bar', 'of' ] );
 			expect( getSelectedSuggestion() ).to.equal( null );
 		} );
 
 		it( 'should add tokens from the selected suggestion using Enter', function() {
 			expect( getSelectedSuggestion() ).to.equal( null );
-			sendKey( keyCodes.downArrow ); // 'the'
+			sendKeyDown( keyCodes.downArrow ); // 'the'
 			expect( getSelectedSuggestion() ).to.equal( 'the' );
-			sendKey( keyCodes.downArrow ); // 'of'
+			sendKeyDown( keyCodes.downArrow ); // 'of'
 			expect( getSelectedSuggestion() ).to.equal( 'of' );
-			sendKey( keyCodes.enter );
+			sendKeyDown( keyCodes.enter );
 			expect( wrapper.state.tokens ).to.deep.equal( [ 'foo', 'bar', 'of' ] );
 			expect( getSelectedSuggestion() ).to.equal( null );
 		} );
@@ -400,14 +445,14 @@ describe( 'TokenField', function() {
 		} );
 
 		it( 'should remove the token to the left when backspace pressed', function() {
-			sendKey( keyCodes.backspace );
+			sendKeyDown( keyCodes.backspace );
 			expect( wrapper.state.tokens ).to.deep.equal( [ 'foo' ] );
 		} );
 
 		it( 'should remove the token to the right when delete pressed', function() {
-			sendKey( keyCodes.leftArrow );
-			sendKey( keyCodes.leftArrow );
-			sendKey( keyCodes.delete );
+			sendKeyDown( keyCodes.leftArrow );
+			sendKeyDown( keyCodes.leftArrow );
+			sendKeyDown( keyCodes.delete );
 			expect( wrapper.state.tokens ).to.deep.equal( [ 'bar' ] );
 		} );
 

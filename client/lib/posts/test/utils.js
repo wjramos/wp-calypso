@@ -27,6 +27,38 @@ describe( 'PostUtils', function() {
 		} );
 	} );
 
+	describe( '#isPrivate', function() {
+		it( 'should return undefined when no post is supplied', function() {
+			assert( postUtils.isPrivate() === undefined );
+		} );
+
+		it( 'should return true when post.status is private', function() {
+			assert( postUtils.isPrivate( { status: 'private' } ) );
+		} );
+
+		it( 'should return false when post.status is not private', function() {
+			assert( ! postUtils.isPrivate( { status: 'draft' } ) );
+		} );
+	} );
+
+	describe( '#isPublished', function() {
+		it( 'should return undefined when no post is supplied', function() {
+			assert( postUtils.isPublished() === undefined );
+		} );
+
+		it( 'should return true when post.status is private', function() {
+			assert( postUtils.isPublished( { status: 'private' } ) );
+		} );
+
+		it( 'should return true when post.status is publish', function() {
+			assert( postUtils.isPublished( { status: 'publish' } ) );
+		} );
+
+		it( 'should return false when post.status is not publish or private', function() {
+			assert( ! postUtils.isPublished( { status: 'draft' } ) );
+		} );
+	} );
+
 	describe( '#removeSlug', function() {
 		it( 'should return undefined when no path is supplied', function() {
 			assert( postUtils.removeSlug() === undefined );
@@ -55,6 +87,22 @@ describe( 'PostUtils', function() {
 
 		it( 'should use permalink_URL when not published and present', function() {
 			var path = postUtils.getPermalinkBasePath( { other_URLs: { permalink_URL: 'http://zo.mg/a/permalink/%post_name%/' }, URL: 'https://en.blog.wordpress.com/2015/08/26/new-action-bar/' } );
+			assert( path === 'http://zo.mg/a/permalink/' );
+		} );
+	} );
+
+	describe( '#getPagePath', function() {
+		it( 'should return undefined when no post is supplied', function() {
+			assert( postUtils.getPagePath() === undefined );
+		} );
+
+		it( 'should return post.URL without slug when page is published', function() {
+			var path = postUtils.getPagePath( { status: 'publish', URL: 'http://zo.mg/a/permalink/' } );
+			assert( path === 'http://zo.mg/a/' );
+		} );
+
+		it( 'should use permalink_URL when not published and present', function() {
+			var path = postUtils.getPagePath( { status: 'draft', other_URLs: { permalink_URL: 'http://zo.mg/a/permalink/%post_name%/' } } );
 			assert( path === 'http://zo.mg/a/permalink/' );
 		} );
 	} );

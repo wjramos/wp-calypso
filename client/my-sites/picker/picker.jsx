@@ -1,7 +1,8 @@
 /**
  * External dependencies
  */
-var React = require( 'react' ),
+var ReactDom = require( 'react-dom' ),
+	React = require( 'react' ),
 	noop = require( 'lodash/utility/noop' );
 
 /**
@@ -77,7 +78,7 @@ module.exports = React.createClass( {
 	},
 
 	closePickerOnOutsideClick: function( event ) {
-		var pickerNode = React.findDOMNode( this.refs.siteSelector );
+		var pickerNode = ReactDom.findDOMNode( this.refs.siteSelector );
 
 		// If the user clicks outside the Picker, let's close it
 		if ( ! pickerNode.contains( event.target ) && event.target !== pickerNode ) {
@@ -99,6 +100,7 @@ module.exports = React.createClass( {
 				user={ this.props.user }
 				autoFocus={ this.state.isAutoFocused }
 				onClose={ this.onClose }
+				groups={ true }
 			/>
 		);
 	}

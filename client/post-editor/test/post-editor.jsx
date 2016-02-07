@@ -4,8 +4,9 @@ require( 'lib/react-test-env-setup' )();
  * External dependencies
  */
 const chai = require( 'chai' ),
-	React = require( 'react/addons' ),
+	React = require( 'react' ),
 	ReactInjection = require( 'react/lib/ReactInjection' ),
+	TestUtils = require( 'react-addons-test-utils' ),
 	sinon = require( 'sinon' ),
 	sinonChai = require( 'sinon-chai' ),
 	mockery = require( 'mockery' );
@@ -17,8 +18,7 @@ const i18n = require( 'lib/mixins/i18n' ),
 	PostEditStore = require( 'lib/posts/post-edit-store' ),
 	SitesList = require( 'lib/sites-list/list' );
 
-const expect = chai.expect,
-	TestUtils = React.addons.TestUtils;
+const expect = chai.expect;
 
 const MOCK_COMPONENT = React.createClass( {
 	render: function() {
@@ -42,6 +42,7 @@ mockery.registerMock( 'components/tinymce', MOCK_COMPONENT );
 mockery.registerMock( 'components/popover', MOCK_COMPONENT );
 mockery.registerMock( 'components/forms/clipboard-button', MOCK_COMPONENT );
 mockery.registerMock( 'post-editor/editor-mobile-navigation', MOCK_COMPONENT );
+mockery.registerMock( 'post-editor/editor-media-advanced', MOCK_COMPONENT );
 mockery.registerMock( 'post-editor/editor-ground-control', MOCK_COMPONENT );
 mockery.registerMock( 'post-editor/editor-drawer', MOCK_COMPONENT );
 mockery.registerMock( 'post-editor/editor-author', MOCK_COMPONENT );

@@ -43,6 +43,7 @@
 		background: $gray-light;
 		border-color: lighten( $gray, 30% );
 		color: lighten( $gray, 10% );
+		-webkit-text-fill-color: lighten( $gray, 10% );
 
 		&:hover {
 			cursor: default;
@@ -105,7 +106,7 @@ input[type=radio] {
 	display: inline-block;
 	line-height: 0;
 	height: 16px;
-	margin: 4px 0 0;
+	margin: 2px 0 0;
 	float: left;
 	outline: 0;
 	padding: 0;
@@ -231,89 +232,6 @@ input[type=radio] {
 			height: 100%;
 			width: 100%;
 			top: 0;
-		}
-	}
-}
-
-
-// Toggle switches
-.toggle[type="checkbox"] {
-	display: none;
-}
-
-.toggle {
-	+ .toggle-label {
-		position: relative;
-		display: inline-block;
-		border-radius: 12px;
-		padding: 2px;
-		width: 40px;
-		height: 24px;
-		background: lighten( $gray, 10% );
-		vertical-align: middle;
-		outline: 0;
-		cursor: pointer;
-		transition: all .4s ease;
-
-		&:after, &:before{
-			position: relative;
-			display: block;
-			content: "";
-			width: 20px;
-			height: 20px;
-		}
-		&:after{
-			left: 0;
-			border-radius: 50%;
-			background: #fff;
-			transition: all .2s ease;
-		}
-		&:before{
-			display: none;
-		}
-		&:hover{
-			background: lighten( $gray, 20% );
-		}
-	}
-	&:focus{
-		+ .toggle-label{
-			box-shadow: 0 0 0 2px $blue-medium;
-		}
-		&:checked + .toggle-label{
-			box-shadow: 0 0 0 2px $blue-light;
-		}
-	}
-	&:checked{
-		+ .toggle-label{
-			background: $blue-medium;
-
-			&:after{
-				left: 16px;
-			}
-		}
-	}
-	&:checked:hover{
-		+ .toggle-label{
-			background: $blue-light;
-		}
-	}
-
-	&:disabled,
-	&:disabled:hover {
-		+ .toggle-label{
-			background: lighten( $gray, 30% );
-		}
-	}
-}
-
-// Classes for toggle state before action is complete (updating plugin or something)
-.toggle.is-toggling {
-	+ .toggle-label {
-		background: $blue-medium;
-	}
-	&:checked {
-		+ .toggle-label {
-			background: lighten( $gray, 20% );
 		}
 	}
 }

@@ -1,7 +1,8 @@
 /**
  * External Dependencies
  */
-var React = require( 'react' ),
+var ReactDom = require( 'react-dom' ),
+	React = require( 'react' ),
 	filter = require( 'lodash/collection/filter' ),
 	map = require( 'lodash/collection/map' ),
 	classNames = require( 'classnames' );
@@ -94,7 +95,7 @@ var SegmentedControl = React.createClass( {
 		if ( this.props.children ) {
 			// add keys and refs to children
 			return React.Children.map( this.props.children, function( child, index ) {
-				var newChild = React.addons.cloneWithProps( child, {
+				var newChild = React.cloneElement( child, {
 					ref: ( child.type === ControlItem ) ? 'item-' + refIndex : null,
 					key: 'item-' + index,
 					onClick: function( event ) {
@@ -207,7 +208,7 @@ var SegmentedControl = React.createClass( {
 			return false;
 		}
 
-		this.refs[ 'item-' + newIndex ].refs.itemLink.getDOMNode().focus();
+		ReactDom.findDOMNode( this.refs[ 'item-' + newIndex ].refs.itemLink ).focus();
 		this.focused = newIndex;
 
 		return newIndex;

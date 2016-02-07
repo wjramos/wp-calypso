@@ -9,7 +9,8 @@ const React = require( 'react' ),
 const Search = require( 'components/search' ),
 	FollowingEditSubscribeFormResult = require( './subscribe-form-result' ),
 	FeedSubscriptionActions = require( 'lib/reader-feed-subscriptions/actions' ),
-	Gridicon = require( 'components/gridicon' );
+	Gridicon = require( 'components/gridicon' ),
+	stats = require( 'reader/stats' );
 
 const minSearchLength = 8; // includes protocol
 
@@ -39,6 +40,10 @@ var FollowingEditSubscribeForm = React.createClass( {
 		this.verifySearchString( this.props.initialSearchString );
 	},
 
+	focus: function() {
+		this.refs.followingEditSubscriptionSearch.focus();
+	},
+
 	handleFollowToggle: function() {
 		FeedSubscriptionActions.follow( this.state.searchString, true );
 		this.setState( { previousSearchString: this.state.searchString } );
@@ -47,7 +52,7 @@ var FollowingEditSubscribeForm = React.createClass( {
 		this.refs.followingEditSubscriptionSearch.clear();
 
 		// Call onFollow method on the parent
-		this.props.onFollow();
+		this.props.onFollow( this.state.searchString );
 	},
 
 	handleFollowIconClick: function() {
@@ -110,8 +115,12 @@ var FollowingEditSubscribeForm = React.createClass( {
 		return true;
 	},
 
+	blankSearch: function() {
+		return ( <div className="following-edit__subscribe-form-blank">{ this.translate( 'Follow any site by adding its URL above.' ) }</div> );
+	},
+
 	render: function() {
-		var searchResult = null,
+		var searchResult = this.blankSearch(),
 			handleFollowToggle = noop;
 
 		const searchString = this.state.searchString,
@@ -135,6 +144,7 @@ var FollowingEditSubscribeForm = React.createClass( {
 			<div className="following-edit__subscribe-form">
 				<Gridicon icon="add-outline" onClick={ this.handleFollowIconClick } />
 				<Search
+					isOpen={ true }
 					key="newSubscriptionSearch"
 					onSearch={ this.handleSearch }
 					onSearchClose={ this.handleSearchClose }
@@ -143,7 +153,6 @@ var FollowingEditSubscribeForm = React.createClass( {
 					ref="followingEditSubscriptionSearch"
 					onKeyDown={ this.handleKeyDown }
 					disableAutocorrect={ true }
-					autoFocus={ true }
 					initialValue={ this.props.initialSearchString }
 				/>
 				{ searchResult }

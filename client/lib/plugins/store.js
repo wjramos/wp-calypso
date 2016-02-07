@@ -27,11 +27,13 @@ var Dispatcher = require( 'dispatcher' ),
  * Constants
  */
 var _CACHE_TIME_TO_LIVE = 10 * 1000, // 10 sec
+	// time to wait until a plugin recentlyUpdate flag is cleared once it's updated
+	_UPDATED_PLUGIN_INFO_TIME_TO_LIVE = 10 * 1000,
 	_STORAGE_LIST_NAME = 'CachedPluginsBySite';
+
 // Stores the plugins of each site.
 var _fetching = {},
 	_pluginsBySite = {},
-	_selectedPlugins = {},
 	PluginsStore,
 	_filters = {
 		none: function() {
@@ -166,8 +168,6 @@ PluginsStore = {
 			}, this );
 		} );
 
-		pluginData.selected = _selectedPlugins[ pluginData.slug ];
-
 		if ( ! fetched ) {
 			return;
 		}
@@ -196,8 +196,6 @@ PluginsStore = {
 					plugins[ plugin.slug ] = assign( {}, plugin, { sites: [] } );
 				}
 				plugins[ plugin.slug ].sites.push( assign( {}, site, { plugin: plugin } ) );
-
-				plugins[ plugin.slug ].selected = _selectedPlugins[ plugin.slug ];
 			}, this );
 		} );
 		if ( ! fetched ) {
@@ -306,13 +304,12 @@ PluginsStore = {
 	}
 };
 
-PluginsStore.dispatchToken = Dispatcher.register( function( payload ) {
-	var action = payload.action,
-		plugins;
-	debug( 'register event Type', action.type, payload );
+PluginsStore.dispatchToken = Dispatcher.register( function( { action } ) {
+	debug( 'register event Type', action.type, action );
 
 	switch ( action.type ) {
 		case 'RECEIVE_PLUGINS':
+			_fetching[ action.site.ID ] = false;
 			if ( action.error ) {
 				updatePlugins( action.site, [] );
 				PluginsStore.emitChange();
@@ -329,30 +326,12 @@ PluginsStore.dispatchToken = Dispatcher.register( function( payload ) {
 			PluginsStore.emitChange();
 			break;
 
-		case 'TOGGLE_PLUGIN_SELECTION':
-			if ( _selectedPlugins[ action.plugin.slug ] ) {
-				delete _selectedPlugins[ action.plugin.slug ];
-			} else {
-				_selectedPlugins[ action.plugin.slug ] = true;
-			}
+		case 'AUTOUPDATE_PLUGIN':
+		case 'UPDATE_PLUGIN':
 			PluginsStore.emitChange();
 			break;
 
-		case 'SELECT_FILTER_PLUGINS':
-			_selectedPlugins = {};
-			if ( action.sites.length ) {
-				plugins = PluginsStore.getPlugins( action.sites, action.filter ) || [];
-				plugins.forEach( function( plugin ) {
-					_selectedPlugins[ plugin.slug ] = true;
-				} );
-				if ( ! action.options || ! action.options.silent ) {
-					PluginsStore.emitChange();
-				}
-			}
-			break;
-
-		case 'AUTOUPDATE_PLUGIN':
-		case 'UPDATE_PLUGIN':
+		case 'REMOVE_PLUGINS_UPDATE_INFO':
 			update( action.site, action.plugin.slug, { update: null } );
 			PluginsStore.emitChange();
 			break;
@@ -365,8 +344,12 @@ PluginsStore.dispatchToken = Dispatcher.register( function( payload ) {
 				// still needs to be updated
 				update( action.site, action.plugin.slug, { update: action.plugin.update } );
 			} else {
-				update( action.site, action.plugin.slug, action.data );
+				update( action.site,
+					action.plugin.slug,
+					Object.assign( { update: { recentlyUpdated: true } }, action.data )
+				);
 				sitesList.onUpdatedPlugin( action.site );
+				setTimeout( PluginsActions.removePluginUpdateInfo.bind( PluginsActions, action.site, action.plugin ), _UPDATED_PLUGIN_INFO_TIME_TO_LIVE );
 			}
 			PluginsStore.emitChange();
 			break;

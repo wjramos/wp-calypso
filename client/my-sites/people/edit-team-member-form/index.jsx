@@ -1,9 +1,10 @@
 /**
  * External dependencies
  */
-var React = require( 'react/addons' ),
+var React = require( 'react' ),
+	LinkedStateMixin = require( 'react-addons-linked-state-mixin' ),
+	PureRenderMixin = require( 'react-pure-render/mixin' ),
 	debug = require( 'debug' )( 'calypso:my-sites:people:edit-team-member-form' ),
-	page = require( 'page' ),
 	omit = require( 'lodash/object/omit' ),
 	assign = require( 'lodash/object/assign' ),
 	filter = require( 'lodash/collection/filter' ),
@@ -38,7 +39,7 @@ var Main = require( 'components/main' ),
 var EditUserForm = React.createClass( {
 	displayName: 'EditUserForm',
 
-	mixins: [ React.addons.LinkedStateMixin, React.addons.PureRenderMixin ],
+	mixins: [ LinkedStateMixin, PureRenderMixin ],
 
 	getInitialState: function() {
 		return this.getStateObject( this.props );
@@ -111,7 +112,7 @@ var EditUserForm = React.createClass( {
 
 		this.props.markSaved();
 
-		// Since we store 'roles' in state as a string, but user objects expext
+		// Since we store 'roles' in state as a string, but user objects expect
 		// roles to be an array, if we've updated the user's role, we need to
 		// place the role in an array before updating the user.
 		UsersActions.updateUser(
@@ -228,7 +229,7 @@ var EditUserForm = React.createClass( {
 module.exports = React.createClass( {
 	displayName: 'EditTeamMemberForm',
 
-	mixins: [ React.addons.PureRenderMixin, protectForm.mixin ],
+	mixins: [ PureRenderMixin, protectForm.mixin ],
 
 	getInitialState: function() {
 		return ( {

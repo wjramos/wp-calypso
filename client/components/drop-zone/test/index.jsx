@@ -5,8 +5,9 @@ require( 'lib/react-test-env-setup' )( '<html><body><div id="container"></div></
  * External dependencies
  */
 var expect = require( 'chai' ).expect,
-	React = require( 'react/addons' ),
-	TestUtils = React.addons.TestUtils,
+	ReactDom = require( 'react-dom' ),
+	React = require( 'react' ),
+	TestUtils = require( 'react-addons-test-utils' ),
 	sinon = require( 'sinon' );
 
 /**
@@ -14,11 +15,20 @@ var expect = require( 'chai' ).expect,
  */
 var DropZone = require( '../' );
 
+/**
+ * Module variables
+ */
+var Wrapper = React.createClass( {
+	render: function() {
+		return <div>{ this.props.children }</div>;
+	}
+} );
+
 describe( 'DropZone', function() {
 	var container, sandbox;
 
 	before( function() {
-		DropZone.type.prototype.__reactAutoBindMap.translate = sinon.stub().returnsArg( 0 );
+		DropZone.prototype.__reactAutoBindMap.translate = sinon.stub().returnsArg( 0 );
 		container = document.getElementById( 'container' );
 		window.MutationObserver = sinon.stub().returns( {
 			observe: sinon.stub(),
@@ -28,7 +38,7 @@ describe( 'DropZone', function() {
 
 	after( function() {
 		delete window.MutationObserver;
-		delete DropZone.type.prototype.__reactAutoBindMap.translate;
+		delete DropZone.prototype.__reactAutoBindMap.translate;
 	} );
 
 	beforeEach( function() {
@@ -37,55 +47,54 @@ describe( 'DropZone', function() {
 
 	afterEach( function() {
 		sandbox.restore();
-		React.unmountComponentAtNode( container );
+		ReactDom.unmountComponentAtNode( container );
 	} );
 
 	it( 'should render as a child of its container by default', function() {
-		var tree = React.render( React.createElement( DropZone ), container );
+		var tree = ReactDom.render( React.createElement( DropZone ), container );
 
-		expect( tree.refs.zone.getDOMNode().parentNode.id ).to.equal( 'container' );
+		expect( tree.refs.zone.parentNode.id ).to.equal( 'container' );
 	} );
 
 	it( 'should accept a fullScreen prop to be rendered at the root', function() {
-		var tree = React.render( React.createElement( DropZone, {
+		var tree = ReactDom.render( React.createElement( DropZone, {
 			fullScreen: true
 		} ), container );
 
-		expect( tree.refs.zone.getDOMNode().parentNode.id ).to.not.equal( 'container' );
-		expect( tree.refs.zone.getDOMNode().parentNode.parentNode ).to.eql( document.body );
+		expect( tree.refs.zone.parentNode.id ).to.not.equal( 'container' );
+		expect( tree.refs.zone.parentNode.parentNode ).to.eql( document.body );
 	} );
 
 	it( 'should render default content if none is provided', function() {
-		var tree = React.render( React.createElement( DropZone ), container ),
+		var tree = ReactDom.render( React.createElement( DropZone ), container ),
 			content = TestUtils.findRenderedDOMComponentWithClass( tree, 'drop-zone__content' );
 
 		TestUtils.findRenderedDOMComponentWithClass( tree, 'drop-zone__content-icon' );
 		TestUtils.findRenderedDOMComponentWithClass( tree, 'drop-zone__content-text' );
-		expect( content.getDOMNode().textContent ).to.equal( 'Drop files to upload' );
+		expect( content.textContent ).to.equal( 'Drop files to upload' );
 	} );
 
 	it( 'should accept children to override the default content', function() {
-		var tree = React.render( React.createElement( DropZone, null, 'Hello World' ), container ),
+		var tree = ReactDom.render( React.createElement( DropZone, null, 'Hello World' ), container ),
 			content = TestUtils.findRenderedDOMComponentWithClass( tree, 'drop-zone__content' );
 
-		expect( content.getDOMNode().textContent ).to.equal( 'Hello World' );
+		expect( content.textContent ).to.equal( 'Hello World' );
 	} );
 
 	it( 'should accept an icon to override the default icon', function() {
-		var tree = React.render( React.createElement( DropZone, {
-			icon: 'hello-world'
-		} ), container ), icon;
+		var tree = ReactDom.render( React.createElement( DropZone, {
+				icon: 'hello-world'
+			} ), container ), icon;
 
 		icon = TestUtils.findRenderedDOMComponentWithClass( tree, 'drop-zone__content-icon' );
 
-		expect( icon.getDOMNode().className ).to.contain( 'hello-world' );
+		expect( icon.className ).to.contain( 'hello-world' );
 	} );
 
 	it( 'should highlight the drop zone when dragging over the body', function() {
-		var tree = React.render( React.createElement( DropZone ), container ),
-			dragEnterEvent = new window.MouseEvent();
+		var tree = ReactDom.render( React.createElement( DropZone ), container ),
+			dragEnterEvent = new window.MouseEvent( 'dragenter' );
 
-		dragEnterEvent.initMouseEvent( 'dragenter', true, true );
 		window.dispatchEvent( dragEnterEvent );
 
 		expect( tree.state.isDraggingOverDocument ).to.be.ok;
@@ -93,10 +102,9 @@ describe( 'DropZone', function() {
 	} );
 
 	it( 'should start observing the body for mutations when dragging over', function( done ) {
-		var tree = React.render( React.createElement( DropZone ), container ),
-			dragEnterEvent = new window.MouseEvent();
+		var tree = ReactDom.render( React.createElement( DropZone ), container ),
+			dragEnterEvent = new window.MouseEvent( 'dragenter' );
 
-		dragEnterEvent.initMouseEvent( 'dragenter', true, true );
 		window.dispatchEvent( dragEnterEvent );
 
 		process.nextTick( function() {
@@ -106,14 +114,11 @@ describe( 'DropZone', function() {
 	} );
 
 	it( 'should stop observing the body for mutations upon drag ending', function( done ) {
-		var tree = React.render( React.createElement( DropZone ), container ),
-			dragEnterEvent = new window.MouseEvent(),
-			dragLeaveEvent = new window.MouseEvent();
+		var tree = ReactDom.render( React.createElement( DropZone ), container ),
+			dragEnterEvent = new window.MouseEvent( 'dragenter' ),
+			dragLeaveEvent = new window.MouseEvent( 'dragleave' );
 
-		dragEnterEvent.initMouseEvent( 'dragenter', true, true );
 		window.dispatchEvent( dragEnterEvent );
-
-		dragLeaveEvent.initMouseEvent( 'dragleave', true, true );
 		window.dispatchEvent( dragLeaveEvent );
 
 		process.nextTick( function() {
@@ -123,16 +128,15 @@ describe( 'DropZone', function() {
 	} );
 
 	it( 'should not highlight if onVerifyValidTransfer returns false', function() {
-		var dragEnterEvent = new window.MouseEvent(),
+		var dragEnterEvent = new window.MouseEvent( 'dragenter' ),
 			tree;
 
-		tree = React.render( React.createElement( DropZone, {
+		tree = ReactDom.render( React.createElement( DropZone, {
 			onVerifyValidTransfer: function() {
 				return false;
 			}
 		} ), container );
 
-		dragEnterEvent.initMouseEvent( 'dragenter', true, true );
 		window.dispatchEvent( dragEnterEvent );
 
 		expect( tree.state.isDraggingOverDocument ).to.not.be.ok;
@@ -142,12 +146,11 @@ describe( 'DropZone', function() {
 	it( 'should further highlight the drop zone when dragging over the element', function() {
 		var tree, dragEnterEvent;
 
-		sandbox.stub( DropZone.type.prototype.__reactAutoBindMap, 'isWithinZoneBounds' ).returns( true );
+		sandbox.stub( DropZone.prototype.__reactAutoBindMap, 'isWithinZoneBounds' ).returns( true );
 
-		tree = React.render( React.createElement( DropZone ), container );
+		tree = ReactDom.render( React.createElement( DropZone ), container );
 
-		dragEnterEvent = new window.MouseEvent();
-		dragEnterEvent.initMouseEvent( 'dragenter', true, true );
+		dragEnterEvent = new window.MouseEvent( 'dragenter' );
 		window.dispatchEvent( dragEnterEvent );
 
 		expect( tree.state.isDraggingOverDocument ).to.be.ok;
@@ -155,12 +158,11 @@ describe( 'DropZone', function() {
 	} );
 
 	it( 'should further highlight the drop zone when dragging over the body if fullScreen', function() {
-		var tree = React.render( React.createElement( DropZone, {
-			fullScreen: true
-		} ), container ), dragEnterEvent;
+		var tree = ReactDom.render( React.createElement( DropZone, {
+				fullScreen: true
+			} ), container ), dragEnterEvent;
 
-		dragEnterEvent = new window.MouseEvent();
-		dragEnterEvent.initMouseEvent( 'dragenter', true, true );
+		dragEnterEvent = new window.MouseEvent( 'dragenter' );
 		window.dispatchEvent( dragEnterEvent );
 
 		expect( tree.state.isDraggingOverDocument ).to.be.ok;
@@ -168,17 +170,16 @@ describe( 'DropZone', function() {
 	} );
 
 	it( 'should call onDrop with the raw event data when a drop occurs', function() {
-		var tree, dropEvent,
+		var dropEvent,
 			spyDrop = sandbox.spy();
 
 		sandbox.stub( window.HTMLElement.prototype, 'contains' ).returns( true );
 
-		tree = React.render( React.createElement( DropZone, {
+		ReactDom.render( React.createElement( DropZone, {
 			onDrop: spyDrop
 		} ), container );
 
-		dropEvent = new window.MouseEvent();
-		dropEvent.initMouseEvent( 'drop', true, true );
+		dropEvent = new window.MouseEvent( 'drop' );
 		window.dispatchEvent( dropEvent );
 
 		expect( spyDrop.calledOnce ).to.be.ok;
@@ -186,16 +187,15 @@ describe( 'DropZone', function() {
 	} );
 
 	it( 'should call onFilesDrop with the files array when a drop occurs', function() {
-		var tree, dropEvent,
+		var dropEvent,
 			spyDrop = sandbox.spy();
 
 		sandbox.stub( window.HTMLElement.prototype, 'contains' ).returns( true );
-		tree = React.render( React.createElement( DropZone, {
+		ReactDom.render( React.createElement( DropZone, {
 			onFilesDrop: spyDrop
 		} ), container );
 
-		dropEvent = new window.MouseEvent();
-		dropEvent.initMouseEvent( 'drop', true, true );
+		dropEvent = new window.MouseEvent( 'drop' );
 		dropEvent.dataTransfer = { files: [ 1, 2, 3 ] };
 		window.dispatchEvent( dropEvent );
 
@@ -205,16 +205,15 @@ describe( 'DropZone', function() {
 
 	it( 'should not call onFilesDrop if onVerifyValidTransfer returns false', function() {
 		var spyDrop = sandbox.spy(),
-			dropEvent = new window.MouseEvent();
+			dropEvent = new window.MouseEvent( 'drop' );
 
-		React.render( React.createElement( DropZone, {
+		ReactDom.render( React.createElement( DropZone, {
 			onFilesDrop: spyDrop,
 			onVerifyValidTransfer: function() {
 				return false;
 			}
 		} ), container );
 
-		dropEvent.initMouseEvent( 'drop', true, true );
 		dropEvent.dataTransfer = { files: [ 1, 2, 3 ] };
 		window.dispatchEvent( dropEvent );
 
@@ -222,8 +221,9 @@ describe( 'DropZone', function() {
 	} );
 
 	it( 'should allow more than one rendered DropZone on a page', function() {
-		var tree = React.render(
-			React.DOM.div(
+		var tree = ReactDom.render(
+			React.createElement(
+				Wrapper,
 				null,
 				React.createElement( DropZone ),
 				React.createElement( DropZone )
@@ -233,8 +233,7 @@ describe( 'DropZone', function() {
 
 		rendered = TestUtils.scryRenderedComponentsWithType( tree, DropZone );
 
-		dragEnterEvent = new window.MouseEvent();
-		dragEnterEvent.initMouseEvent( 'dragenter', true, true );
+		dragEnterEvent = new window.MouseEvent( 'dragenter' );
 		window.dispatchEvent( dragEnterEvent );
 
 		expect( rendered ).to.have.length.of( 2 );

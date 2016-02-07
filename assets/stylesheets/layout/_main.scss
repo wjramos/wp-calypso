@@ -16,15 +16,14 @@
 }
 
 .layout__loader {
-	background: $blue-wordpress;
 	border-bottom: 1px solid darken( $blue-wordpress, 4% );
 	height: 46px;
-	margin-left: -30px;
+	margin-left: -10%;
 	position: absolute;
 		left: 50%;
 		top: 0;
-	width: 60px;
-	z-index: 200;
+	width: 20%;
+	z-index: z-index( 'root', '.layout__loader' );
 
 	// set a delay threshold for opacity changes
 	// prevents showing loader on fast connections
@@ -32,6 +31,10 @@
 	opacity: 0;
 	transition: opacity 0.1s linear;
 	transition-delay: 0.4s;
+
+	@include breakpoint( "<480px" ) {
+		background: $blue-wordpress;
+	}
 }
 
 .layout__loader.is-active {
@@ -97,6 +100,19 @@ body.rtl,
 	font-family: $sans;
 }
 
+/*rtl:ignore*/
+.rtl {
+	.gridicon {
+		&.gridicons-chevron-left,
+		&.gridicons-chevron-right,
+		&.gridicons-arrow-left,
+		&.gridicons-arrow-right {
+			transform: scaleX( -1 );
+		}
+
+	}
+}
+
 .notifications {
 	display: inherit;
 }
@@ -105,6 +121,12 @@ body {
 	color: #404040;
 	font-size: 15px;
 	line-height: 1.5;
+}
+
+noscript {
+	text-align: center;
+	margin-top: 3em;
+	display:block;
 }
 
 /* Headings */
@@ -274,10 +296,6 @@ $sidebar-width-min: 228px;
 		.has-no-sidebar & {
 			padding-left: 8px;
 		}
-
-		.focus-sidebar.is-section-post & {
-			transform: translateX( 0 );
-		}
 	}
 }
 
@@ -288,17 +306,12 @@ $sidebar-width-min: 228px;
 	transition: all 0.15s ease-in-out;
 }
 
-.wpcom-sidebar,
-.site-selector,
+.sidebar,
+.wp-secondary .site-selector,
 .current-site,
-.sidebar-menu {
+.sidebar__menu {
 	transform: translateX( 0 );
 	transition: all 0.15s cubic-bezier(0.075, 0.820, 0.165, 1.000);
-}
-
-.site-selector {
-	opacity: 0;
-	pointer-events: none;
 }
 
 .focus-sites {
@@ -307,7 +320,7 @@ $sidebar-width-min: 228px;
 		pointer-events: none;
 	}
 
-	.site-selector {
+	.wp-secondary .site-selector {
 		opacity: 1;
 		transform: translateX( 272px );
 		pointer-events: auto;
@@ -317,12 +330,12 @@ $sidebar-width-min: 228px;
 		}
 	}
 
-	.wpcom-sidebar {
+	.sidebar {
 		pointer-events: none;
 	}
 
 	.current-site,
-	.sidebar-menu {
+	.sidebar__menu {
 		opacity: 0;
 		transform: translateX( 64px );
 	}
@@ -330,6 +343,31 @@ $sidebar-width-min: 228px;
 
 .focus-sidebar {
 	overflow: hidden;
+}
+
+// site selector in the sidebar
+.wp-secondary .site-selector {
+	background: lighten( $gray, 30% );
+	border-right: 1px solid lighten( $gray, 25% );
+	position: fixed;
+		top: 47px;
+		bottom: 0;
+		left: -272px;
+	width: 272px;
+	overflow: hidden;
+	z-index: 10;
+	opacity: 0;
+	pointer-events: none;
+
+	.search {
+		border-bottom: 1px solid lighten( $gray, 20% );
+	}
+
+	@include breakpoint( "<660px" ) {
+		width: 100vw;
+		left: -100vw;
+		-webkit-overflow-scrolling: touch;
+	}
 }
 
 
@@ -405,7 +443,7 @@ body.newdash div.wordpress-com-extension-promo {
 	position: fixed;
 		bottom: 16px;
 		left: 16px;
-	z-index: 999;
+	z-index: z-index( 'root', '.environment-badge' );
 	backface-visibility: hidden;
 
 	.bug-report {
@@ -419,7 +457,7 @@ body.newdash div.wordpress-com-extension-promo {
 		color: $gray-dark;
 		text-decoration: none;
 		text-align: center;
-		z-index: 1000;
+		z-index: z-index( '.environment-badge', '.environment-badge .bug-report' );
 		transition: border-radius 0.2s ease-out;
 		&:before {
 			@include noticon( '\f50a', 14px );
@@ -444,7 +482,7 @@ body.newdash div.wordpress-com-extension-promo {
 				right: 0;
 				top: 0;
 				bottom: 0;
-			z-index: -1;
+			z-index: z-index( '.environment-badge', '.environment-badge .environment::before' );
 			background-color: $white;
 			border: solid 1px $gray-dark;
 		}
@@ -480,6 +518,11 @@ body.newdash div.wordpress-com-extension-promo {
 			&:before {
 				background-color: $blue-light;
 			}
+		}
+		&.branch-name {
+			text-transform: inherit;
+			background-color: #272727;
+			color: #F1F1F1;
 		}
 	}
 

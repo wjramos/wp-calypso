@@ -3,10 +3,11 @@
  */
 var chai = require( 'chai' ),
 	expect = chai.expect,
-	React = require( 'react/addons' ),
+	ReactDom = require( 'react-dom' ),
+	React = require( 'react' ),
 	mockery = require( 'mockery' ),
 	sinon = require( 'sinon' ),
-	TestUtils = React.addons.TestUtils;
+	TestUtils = require( 'react-addons-test-utils' );
 
 /**
  * Mocks & fixtures
@@ -45,7 +46,7 @@ describe( 'PluginAutoupdateToggle', function() {
 	} );
 
 	afterEach( function() {
-		React.unmountComponentAtNode( document.body );
+		ReactDom.unmountComponentAtNode( document.body );
 		mockedActions.togglePluginAutoUpdate.reset();
 		analyticsMock.ga.recordEvent.reset();
 	} );
@@ -58,7 +59,7 @@ describe( 'PluginAutoupdateToggle', function() {
 
 	it( 'should register an event when the subcomponent action is executed', function() {
 		var rendered = TestUtils.renderIntoDocument( <PluginAutoupdateToggle { ...fixtures } /> ),
-			pluginAutoupdateToggle = React.findDOMNode( rendered );
+			pluginAutoupdateToggle = ReactDom.findDOMNode( rendered );
 
 		TestUtils.Simulate.click( pluginAutoupdateToggle );
 
@@ -68,11 +69,10 @@ describe( 'PluginAutoupdateToggle', function() {
 
 	it( 'should call an action when the subcomponent action is executed', function() {
 		var rendered = TestUtils.renderIntoDocument( <PluginAutoupdateToggle { ...fixtures } /> ),
-			pluginAutoupdateToggle = React.findDOMNode( rendered );
+			pluginAutoupdateToggle = ReactDom.findDOMNode( rendered );
 
 		TestUtils.Simulate.click( pluginAutoupdateToggle );
 
 		expect( mockedActions.togglePluginAutoUpdate.called ).to.equal( true );
 	} );
 } );
-

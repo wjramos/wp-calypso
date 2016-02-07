@@ -28,8 +28,15 @@ var PostCommentForm = React.createClass( {
 	componentDidMount: function() {
 		// If it's a reply, give the input focus
 		if ( this.props.parentCommentID > 0 ) {
-			this.refs.commentText.getDOMNode().focus();
+			this.refs.commentText.focus();
 		}
+	},
+
+	componentDidUpdate: function() {
+		const commentTextNode = this.refs.commentText,
+			commentText = this.getCommentText(),
+			currentHeight = parseInt( commentTextNode.style.height, 10 ) || 0;
+		commentTextNode.style.height = commentText.length ? Math.max( commentTextNode.scrollHeight, currentHeight ) + 'px' : null;
 	},
 
 	handleSubmit: function( event ) {
@@ -80,7 +87,7 @@ var PostCommentForm = React.createClass( {
 	},
 
 	resetCommentText: function() {
-		var commentTextNode = this.refs.commentText.getDOMNode();
+		var commentTextNode = this.refs.commentText;
 		commentTextNode.value = '';
 		this.setState( { isButtonActive: false } );
 		this.toggleButtonVisibility( false );
@@ -96,12 +103,12 @@ var PostCommentForm = React.createClass( {
 			return;
 		}
 
-		return this.refs.commentText.getDOMNode().value.trim();
+		return this.refs.commentText.value.trim();
 	},
 
 	submit: function() {
 		var post = this.props.post,
-			commentTextNode = this.refs.commentText.getDOMNode(),
+			commentTextNode = this.refs.commentText,
 			commentText = commentTextNode.value.trim();
 
 		if ( ! commentText ) {
@@ -117,7 +124,11 @@ var PostCommentForm = React.createClass( {
 
 		stats.recordAction( 'posted_comment' );
 		stats.recordGaEvent( 'Clicked Post Comment Button' );
-		stats.recordTrack( 'calypso_reader_article_commented_on' );
+		stats.recordTrack( 'calypso_reader_article_commented_on', {
+			blog_id: post.site_ID,
+			post_id: post.ID,
+			parent_post_id: this.props.parentCommentID > 0 ? this.props.parentCommentID : undefined
+		} );
 
 		this.resetCommentText();
 

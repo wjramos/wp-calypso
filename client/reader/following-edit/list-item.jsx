@@ -1,13 +1,18 @@
-// External dependencies
-const React = require( 'react/addons' ),
+/**
+ * External dependencies
+ */
+const React = require( 'react' ),
+	PureRenderMixin = require( 'react-pure-render/mixin' ),
 	noop = require( 'lodash/utility/noop' );
 
-// Internal dependencies
+/**
+ * Internal dependencies
+ */
 const Icon = require( 'reader/list-item/icon' ),
 	Title = require( 'reader/list-item/title' ),
 	Description = require( 'reader/list-item/description' ),
 	Actions = require( 'reader/list-item/actions' ),
-	FollowingEditHelper = require( './helper' ),
+	FeedDisplayHelper = require( 'reader/lib/feed-display-helper' ),
 	decodeEntities = require( 'lib/formatting' ).decodeEntities,
 	FeedSubscriptionActions = require( 'lib/reader-feed-subscriptions/actions' ),
 	ReaderFollowButton = require( 'reader/follow-button' ),
@@ -25,10 +30,11 @@ var SubscriptionListItem = React.createClass( {
 		classNames: React.PropTypes.string,
 		onNotificationSettingsOpen: React.PropTypes.func,
 		onNotificationSettingsClose: React.PropTypes.func,
-		openCards: React.PropTypes.object
+		openCards: React.PropTypes.object,
+		isEmailBlocked: React.PropTypes.bool
 	},
 
-	mixins: [ React.addons.PureRenderMixin ],
+	mixins: [ PureRenderMixin ],
 
 	getDefaultProps() {
 		return {
@@ -86,19 +92,19 @@ var SubscriptionListItem = React.createClass( {
 			siteData = this.state.site,
 			feedData = this.state.feed,
 			iconUrl = siteData && siteData.get( 'icon' ),
-			displayUrl = FollowingEditHelper.formatUrlForDisplay( subscription.get( 'URL' ) ),
+			displayUrl = FeedDisplayHelper.formatUrlForDisplay( subscription.get( 'URL' ) ),
 			isFollowing = this.isFollowing(),
-			feedTitle = decodeEntities( FollowingEditHelper.getFeedTitle( siteData, feedData, displayUrl ) );
+			feedTitle = decodeEntities( FeedDisplayHelper.getFeedTitle( siteData, feedData, displayUrl ) );
 
 		const cardHeader = (
 			<div className="subscription-list-item__header-content">
 				<Icon>{ iconUrl ? <img src={ iconUrl.get( 'img' ) } alt="Feed icon" /> : null }</Icon>
 				<Title>
-					<a href={ FollowingEditHelper.getFeedStreamUrl( siteData, feedData, displayUrl ) }>{ feedTitle }</a>
+					<a href={ FeedDisplayHelper.getFeedStreamUrl( siteData, feedData, displayUrl ) }>{ feedTitle }</a>
 				</Title>
 				<Description><a href={ subscription.get( 'URL' ) }>{ displayUrl }</a></Description>
 				<Actions>
-					<ReaderFollowButton following={ isFollowing } onFollowToggle={ this.handleFollowToggle } location="following_edit" isButtonOnly={ true } />
+					<ReaderFollowButton following={ isFollowing } onFollowToggle={ this.handleFollowToggle } isButtonOnly={ true } siteUrl={ subscription.get( 'URL' ) } />
 				</Actions>
 			</div>
 		);
@@ -117,7 +123,7 @@ var SubscriptionListItem = React.createClass( {
 				className={ this.props.classNames }
 				expanded={ isCardExpanded }
 			>
-				{ isFollowing ? <FollowingEditNotificationSettings subscription={ subscription } /> : null }
+				{ isFollowing ? <FollowingEditNotificationSettings subscription={ subscription } isEmailBlocked={ this.props.isEmailBlocked } /> : null }
 			</FoldableCard>
 		);
 	}

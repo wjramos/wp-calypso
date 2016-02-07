@@ -7,8 +7,12 @@ var React = require( 'react' ),
 /**
  * Internal dependencies
  */
-var MenuItem = require( './sidebar-item' ),
+var Sidebar = require( 'layout/sidebar' ),
+	SidebarHeading = require( 'layout/sidebar/heading' ),
+	SidebarItem = require( 'layout/sidebar/item' ),
+	SidebarMenu = require( 'layout/sidebar/menu' ),
 	config = require( 'config' ),
+	layoutFocus = require( 'lib/layout-focus' ),
 	ProfileGravatar = require( 'me/profile-gravatar' ),
 	eventRecorder = require( 'me/event-recorder' ),
 	observe = require( 'lib/mixins/data-observe' ),
@@ -23,6 +27,11 @@ module.exports = React.createClass( {
 
 	componentDidMount: function() {
 		debug( 'The MeSidebar React component is mounted.' );
+	},
+
+	onNavigate: function() {
+		layoutFocus.setNext( 'content' );
+		window.scrollTo( 0, 0 );
 	},
 
 	render: function() {
@@ -55,75 +64,83 @@ module.exports = React.createClass( {
 		}
 
 		return (
-			<div className="me-sidebar__menu">
-				<ul className="wpcom-sidebar sidebar">
+			<Sidebar>
+				<ProfileGravatar user={ this.props.user.get() } />
+				<FormButton
+					className="me-sidebar__menu__signout"
+					isPrimary={ false }
+					onClick={ this.recordClickEvent( 'Sidebar Sign Out Link', userUtilities.logout ) }
+					title={ this.translate( 'Sign out of WordPress.com', { textOnly: true } ) }
+				>
+					{ this.translate( 'Sign Out' ) }
+				</FormButton>
+				<SidebarMenu>
+					<SidebarHeading>{ this.translate( 'Profile' ) }</SidebarHeading>
+					<ul>
+						<SidebarItem
+							selected={ selected === 'profile' }
+							link={ config.isEnabled( 'me/my-profile' ) ? '/me' : '//wordpress.com/me/public-profile' }
+							label={ this.translate( 'My Profile' ) }
+							icon="user"
+							onNavigate={ this.onNavigate }
+						/>
 
-					<ProfileGravatar user={ this.props.user.get() } />
+						<SidebarItem
+							selected={ selected === 'account' }
+							link={ config.isEnabled( 'me/account' ) ? '/me/account' : '//wordpress.com/me/account' }
+							label={ this.translate( 'Account Settings' ) }
+							icon="cog"
+							onNavigate={ this.onNavigate }
+						/>
 
-					<FormButton
-						className="me-sidebar__menu__signout"
-						isPrimary={false}
-						onClick={ this.recordClickEvent( 'Sidebar Sign Out Link', userUtilities.logout ) }
-						title={ this.translate( 'Sign out of WordPress.com', { textOnly: true } ) }
-					>
-						{ this.translate( 'Sign Out' ) }
-					</FormButton>
+						<SidebarItem
+							selected={ selected === 'billing' }
+							link="/purchases"
+							label={ this.translate( 'Manage Purchases' ) }
+							icon="credit-card"
+							onNavigate={ this.onNavigate }
+						/>
 
-					<li className="sidebar-menu me-profile">
-						<h2 className="sidebar-heading">{ this.translate( 'Profile' ) }</h2>
-						<ul>
-							<MenuItem
-								selected={ selected === 'profile' }
-								href={ config.isEnabled( 'me/my-profile' ) ? '/me' : '//wordpress.com/me/public-profile' }
-								label={ this.translate( 'My Profile' ) }
-								icon="user"
-							/>
+						<SidebarItem
+							selected={ selected === 'security' }
+							link={ config.isEnabled( 'me/security' ) ? '/me/security' : '//wordpress.com/me/security' }
+							label={ this.translate( 'Security' ) }
+							icon="lock"
+							onNavigate={ this.onNavigate }
+						/>
 
-							<MenuItem
-								selected={ selected === 'account' }
-								href={ config.isEnabled( 'me/account' ) ? '/me/account' : '//wordpress.com/me/account' }
-								label={ this.translate( 'Account Settings' ) }
-								icon="cog"
-							/>
+						<SidebarItem
+							selected={ selected === 'notifications' }
+							link={ config.isEnabled( 'me/notifications' ) ? '/me/notifications' : '//wordpress.com/me/notifications' }
+							label={ this.translate( 'Notifications' ) }
+							icon="bell"
+							onNavigate={ this.onNavigate }
+						/>
 
-							<MenuItem
-								selected={ selected === 'billing' }
-								href="/purchases"
-								label={ this.translate( 'Manage Purchases' ) }
-								icon="credit-card"
-							/>
-
-							<MenuItem
-								selected={ selected === 'security' }
-								href={ config.isEnabled( 'me/security' ) ? '/me/security' : '//wordpress.com/me/security' }
-								label={ this.translate( 'Security' ) }
-								icon="lock"
-							/>
-
-							<MenuItem
-								selected={ selected === 'notifications' }
-								href={ config.isEnabled( 'me/notifications' ) ? '/me/notifications' : '//wordpress.com/me/notifications' }
-								label={ this.translate( 'Notifications' ) }
-								icon="bell"
-							/>
-
-						</ul>
-					</li>
-					<li className="sidebar-menu me-extras">
-						<h2 className="sidebar-heading">{ this.translate( 'Special' ) }</h2>
-						<ul>
-							{ this.renderNextStepsItem( selected ) }
-							<MenuItem
-								selected={ selected === 'help' }
-								href={ config.isEnabled( 'help' ) ? '/help' : '//support.wordpress.com' }
-								label={ this.translate( 'Help' ) }
-								external={ config.isEnabled( 'help' ) ? 'false' : 'true' }
-								icon="help-outline"
-							/>
-						</ul>
-					</li>
-				</ul>
-			</div>
+					</ul>
+				</SidebarMenu>
+				<SidebarMenu>
+					<SidebarHeading>{ this.translate( 'Special' ) }</SidebarHeading>
+					<ul>
+						<SidebarItem
+							selected={ selected === 'get-apps' }
+							link={ '/me/get-apps' }
+							label={ this.translate( 'Get Apps' ) }
+							icon="my-sites"
+							onNavigate={ this.onNavigate }
+						/>
+						{ this.renderNextStepsItem( selected ) }
+						<SidebarItem
+							selected={ selected === 'help' }
+							link={ config.isEnabled( 'help' ) ? '/help' : '//support.wordpress.com' }
+							label={ this.translate( 'Help' ) }
+							external={ config.isEnabled( 'help' ) ? 'false' : 'true' }
+							icon="help-outline"
+							onNavigate={ this.onNavigate }
+						/>
+					</ul>
+				</SidebarMenu>
+			</Sidebar>
 		);
 	},
 
@@ -131,11 +148,12 @@ module.exports = React.createClass( {
 		var currentUser = this.props.user.get();
 		if ( config.isEnabled( 'me/next-steps' ) && currentUser && currentUser.site_count > 0 ) {
 			return (
-				<MenuItem
+				<SidebarItem
 					selected={ selected === 'next' }
-					href="/me/next"
+					link="/me/next"
 					label={ this.translate( 'Next Steps' ) }
 					icon="list-checkmark"
+					onNavigate={ this.onNavigate }
 				/>
 			);
 		}

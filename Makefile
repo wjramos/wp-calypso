@@ -16,7 +16,7 @@ NODE_BIN := $(THIS_DIR)/node_modules/.bin
 NODE ?= node
 NPM ?= $(NODE) $(shell which npm)
 BUNDLER ?= $(BIN)/bundler
-SASS ?= $(NODE_BIN)/node-sass --include-path 'client:shared'
+SASS ?= $(NODE_BIN)/node-sass --include-path 'client'
 RTLCSS ?= $(NODE_BIN)/rtlcss
 AUTOPREFIXER ?= $(NODE_BIN)/autoprefixer
 RECORD_ENV ?= $(BIN)/record-env
@@ -26,9 +26,30 @@ LIST_ASSETS ?= $(BIN)/list-assets
 ALL_DEVDOCS_JS ?= $(THIS_DIR)/server/devdocs/bin/generate-devdocs-index
 
 # files used as prereqs
-SASS_FILES := $(shell find client shared assets -type f -name '*.scss')
-JS_FILES := $(shell find . -type f \( -name '*.js' -or -name '*.jsx' \) -and -not \( -path './node_modules/*' -or  -path './public/*' \) )
-MD_FILES := $(shell find . -name '*.md' -and -not -path '*node_modules*' -and -not -path '*.git*' | sed 's/ /\\ /g')
+SASS_FILES := $(shell \
+	find client assets \
+		-type f \
+		-name '*.scss' \
+)
+JS_FILES := $(shell \
+	find . \
+		-not \( -path './.git' -prune \) \
+		-not \( -path './build' -prune \) \
+		-not \( -path './node_modules' -prune \) \
+		-not \( -path './public' -prune \) \
+		-type f \
+		\( -name '*.js' -or -name '*.jsx' \) \
+)
+MD_FILES := $(shell \
+	find . \
+		-not \( -path './.git' -prune \) \
+		-not \( -path './build' -prune \) \
+		-not \( -path './node_modules' -prune \) \
+		-not \( -path './public' -prune \) \
+		-type f \
+		-name '*.md' \
+	| sed 's/ /\\ /g' \
+)
 CLIENT_CONFIG_FILE := client/config/index.js
 
 # variables
@@ -37,18 +58,18 @@ CALYPSO_ENV ?= $(NODE_ENV)
 
 export NODE_ENV := $(NODE_ENV)
 export CALYPSO_ENV := $(CALYPSO_ENV)
-export NODE_PATH := server:shared:.
+export NODE_PATH := server:client:.
 
 .DEFAULT_GOAL := install
 
 welcome:
-	@echo "\033[36m             _                           "
-	@echo "\033[36m    ___ __ _| |_   _ _ __  ___  ___      "
-	@echo "\033[36m   / __/ _\` | | | | | '_ \/ __|/ _ \\   "
-	@echo "\033[36m  | (_| (_| | | |_| | |_) \__ \ (_) |    "
-	@echo "\033[36m   \___\__,_|_|\__, | .__/|___/\___/     "
-	@echo "\033[36m               |___/|_|                  "
-	@echo "\033[m"
+	@printf "\033[36m             _                           \n"
+	@printf "\033[36m    ___ __ _| |_   _ _ __  ___  ___      \n"
+	@printf "\033[36m   / __/ _\` | | | | | '_ \/ __|/ _ \\   \n"
+	@printf "\033[36m  | (_| (_| | | |_| | |_) \__ \ (_) |    \n"
+	@printf "\033[36m   \___\__,_|_|\__, | .__/|___/\___/     \n"
+	@printf "\033[36m               |___/|_|                  \n"
+	@printf "\033[m\n"
 
 install: node_modules
 
@@ -56,14 +77,17 @@ install: node_modules
 run: welcome githooks-commit install build
 	@$(NODE) build/bundle-$(CALYPSO_ENV).js
 
+node-version:
+	@NPM_GLOBAL_ROOT=$(shell $(NPM) -g root) $(BIN)/check-node-version
+
 # a helper rule to ensure that a specific module is installed,
 # without relying on a generic `npm install` command
-node_modules/%:
+node_modules/%: | node-version
 	@$(NPM) install $(notdir $@)
 
 # ensures that the `node_modules` directory is installed and up-to-date with
 # the dependencies listed in the "package.json" file.
-node_modules: package.json
+node_modules: package.json | node-version
 	@$(NPM) prune
 	@$(NPM) install
 	@touch node_modules
@@ -72,7 +96,7 @@ node_modules: package.json
 test: build
 	@$(BIN)/run-all-tests
 
-lint: node_modules/eslint node_modules/eslint-plugin-react node_modules/babel-eslint
+lint: node_modules/eslint node_modules/eslint-plugin-react node_modules/babel-eslint mixedindentlint
 	@$(NODE_BIN)/eslint --quiet $(JS_FILES)
 
 eslint: lint
@@ -84,6 +108,10 @@ eslint-branch: node_modules/eslint node_modules/eslint-plugin-react node_modules
 # ignore functionality
 i18n-lint:
 	@echo "$(JS_FILES)" | sed 's/\([^ ]*\/test\/[^ ]* *\)//g' | xargs -n1 $(I18NLINT)
+
+# Skip files that are auto-generated
+mixedindentlint: node_modules/mixedindentlint
+	@echo "$(JS_FILES)\n$(SASS_FILES)" | xargs $(NODE_BIN)/mixedindentlint --ignore-comments --exclude="client/config/index.js" --exclude="client/components/gridicon/index.jsx"
 
 # keep track of the current CALYPSO_ENV so that it can be used as a
 # prerequisite for other rules
@@ -157,5 +185,5 @@ githooks-push:
 FORCE:
 
 .PHONY: build build-development build-server
-.PHONY: run install test clean distclean translate route
+.PHONY: run install test clean distclean translate route node-version
 .PHONY: githooks githooks-commit githooks-push

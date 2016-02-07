@@ -68,6 +68,10 @@ var utils = {
 		return post && ( post.status === 'publish' || post.status === 'private' );
 	},
 
+	isPrivate: function( post ) {
+		return post && ( 'private' === post.status );
+	},
+
 	getEditedTime: function( post ) {
 		if ( ! post ) {
 			return;
@@ -164,6 +168,17 @@ var utils = {
 		}
 
 		return this.removeSlug( path );
+	},
+
+	getPagePath: function( post ) {
+		if ( ! post ) {
+			return;
+		}
+		if ( ! this.isPublished( post ) ) {
+			return this.getPermalinkBasePath( post );
+		}
+
+		return this.removeSlug( post.URL );
 	},
 
 	removeSlug: function( path ) {

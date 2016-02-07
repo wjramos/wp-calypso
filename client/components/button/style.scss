@@ -187,6 +187,8 @@ button {
 	}
 
 	&.is-compact {
+		background: transparent;
+		border-radius: 0;
 		.gridicon {
 			width: 18px;
 			height: 18px;

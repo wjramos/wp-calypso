@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-var React = require( 'react/addons' ),
+var React = require( 'react' ),
 	classNames = require( 'classnames' ),
 	compact = require( 'lodash/array/compact' );
 
@@ -38,7 +38,7 @@ module.exports = React.createClass( {
 				site={ site }
 				secondarySites={ this.getSecondaryPluginSites( site ) }
 				plugin={ this.props.plugin }
-				wporg={ this.props.plugin.wporg }
+				wporg={ this.props.wporg }
 				notices={ this.props.notices } />;
 	},
 

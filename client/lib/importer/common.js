@@ -4,10 +4,13 @@ import { appStates } from './constants';
 
 // Left( UI ) - Right( API )
 const importerStateMap = [
+	[ appStates.CANCEL_PENDING, 'cancel' ],
+	[ appStates.DEFUNCT, 'importStopped' ],
 	[ appStates.DISABLED, 'disabled' ],
-	[ appStates.IMPORT_FAILURE, 'importer-import-failure' ],
-	[ appStates.IMPORT_SUCCESS, 'importer-import-success' ],
-	[ appStates.IMPORTING, 'importer-importing' ],
+	[ appStates.EXPIRE_PENDING, 'expire' ],
+	[ appStates.IMPORT_FAILURE, 'importFailure' ],
+	[ appStates.IMPORT_SUCCESS, 'importSuccess' ],
+	[ appStates.IMPORTING, 'importing' ],
 	[ appStates.INACTIVE, 'importer-inactive' ],
 	[ appStates.MAP_AUTHORS, 'importer-map-authors' ],
 	[ appStates.READY_FOR_UPLOAD, 'importer-ready-for-upload' ],
@@ -51,14 +54,15 @@ function replaceUserInfoWithIds( customData ) {
 }
 
 export function fromApi( state ) {
-	const { importId: importerId, importStatus, type, progress, customData } = state;
+	const { importId: importerId, importStatus, type, progress, customData, siteId } = state;
 
 	return {
 		importerId,
 		importerState: apiToAppState( importStatus ),
 		type: `importer-type-${ type }`,
 		progress: fromJS( progress ),
-		customData: fromJS( generateSourceAuthorIds( customData ) )
+		customData: fromJS( generateSourceAuthorIds( customData ) ),
+		site: { ID: siteId }
 	};
 }
 
@@ -67,9 +71,9 @@ export function toApi( state ) {
 
 	return Object.assign( {},
 		{ importerId, progress },
-		{ importerState: appStateToApi( importerState ) },
+		{ importStatus: appStateToApi( importerState ) },
 		site && site.ID ? { siteId: site.ID } : {},
-		{ type: type.replace( 'importer-type-', '' ) },
+		type && { type: type.replace( 'importer-type-', '' ) },
 		customData ? { customData: replaceUserInfoWithIds( customData ) } : {}
 	);
 }

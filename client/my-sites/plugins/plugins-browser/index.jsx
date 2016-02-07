@@ -14,13 +14,15 @@ import SectionNav from 'components/section-nav'
 import MainComponent from 'components/main'
 import NavTabs from 'components/section-nav/tabs'
 import NavItem from 'components/section-nav/item'
-import PluginsList from 'my-sites/plugins/plugins-browser-list'
+import NoResults from 'my-sites/no-results'
+import PluginsBrowserList from 'my-sites/plugins/plugins-browser-list'
 import PluginsListStore from 'lib/plugins/wporg-data/list-store'
 import PluginsActions from 'lib/plugins/wporg-data/actions'
 import EmptyContent from 'components/empty-content'
 import URLSearch from 'lib/mixins/url-search'
 import infiniteScroll from 'lib/mixins/infinite-scroll'
 import JetpackManageErrorPage from 'my-sites/jetpack-manage-error-page'
+import FeatureExample from 'components/feature-example'
 
 module.exports = React.createClass( {
 
@@ -118,23 +120,24 @@ module.exports = React.createClass( {
 	getFullListView( category ) {
 		var isFetching = this.state.fullLists[ category ] ? !! this.state.fullLists[ category ].fetching : true;
 		if ( this.getPluginsFullList( category ).length > 0 || isFetching ) {
-			return <PluginsList plugins={ this.getPluginsFullList( category ) } listName={ category } title={ this.translateCategory( category ) } site={ this.props.site } showPlaceholders={ isFetching } currentSites={ this.props.sites.getSelectedOrAllJetpackCanManage() } />;
+			return <PluginsBrowserList plugins={ this.getPluginsFullList( category ) } listName={ category } title={ this.translateCategory( category ) } site={ this.props.site } showPlaceholders={ isFetching } currentSites={ this.props.sites.getSelectedOrAllJetpackCanManage() } />;
 		}
 	},
 
 	getSearchListView( searchTerm ) {
 		var isFetching = this.state.fullLists.search ? !! this.state.fullLists.search.fetching : true;
 		if ( this.getPluginsFullList( 'search' ).length > 0 || isFetching ) {
-			return <PluginsList plugins={ this.getPluginsFullList( 'search' ) } listName={ searchTerm } title={ searchTerm } site={ this.props.site } showPlaceholders={ isFetching } currentSites={ this.props.sites.getSelectedOrAllJetpackCanManage() } />;
+			let searchTitle = this.translate( 'Results for: %(searchTerm)s', { textOnly: true, args: { searchTerm } } );
+			return <PluginsBrowserList plugins={ this.getPluginsFullList( 'search' ) } listName={ searchTerm } title={ searchTitle } site={ this.props.site } showPlaceholders={ isFetching } currentSites={ this.props.sites.getSelectedOrAllJetpackCanManage() } />;
 		}
-		return <EmptyContent
-			title={ this.translate( 'Nothing to see here!' ) }
-			line={ this.translate( 'We could\'t find any plugin with that text' ) }
-			illustration={ '/calypso/images/drake/drake-404.svg' } />;
+		return <NoResults text={ this.translate( 'No plugins match your search for {{searchTerm/}}.', {
+			textOnly: true,
+			components: { searchTerm: <em>{ searchTerm }</em> }
+		} ) } />
 	},
 
 	getPluginSingleListView( category ) {
-		return <PluginsList
+		return <PluginsBrowserList
 			plugins={ this.getPluginsShortList( category ) }
 			listName={ category }
 			title={ this.translateCategory( category ) }
@@ -203,17 +206,21 @@ module.exports = React.createClass( {
 	},
 
 	getMockPluginItems: function() {
-		return <PluginsList
+		return <PluginsBrowserList
 			plugins={ this.getPluginsShortList( 'popular' ) }
 			listName={ 'Plugins' }
 			title={ this.translate( 'Popular Plugins' ) }
 			size={ 12 } />;
 	},
 
-	renderAccessError( selectedSite ) {
+	renderAccessError() {
 		if ( this.state.accessError ) {
 			return (
-				<MainComponent><SidebarNavigation /><EmptyContent { ...this.state.accessError } /></MainComponent>
+				<MainComponent>
+					<SidebarNavigation />
+					<EmptyContent { ...this.state.accessError } />
+					{ this.state.accessError.featureExample ? <FeatureExample>{ this.state.accessError.featureExample }</FeatureExample> : null }
+				</MainComponent>
 			);
 		}
 
@@ -222,9 +229,10 @@ module.exports = React.createClass( {
 				<SidebarNavigation />
 				<JetpackManageErrorPage
 					template="optInManage"
+					title={ this.translate( 'Looking to manage this site\'s plugins?' ) }
 					site={ this.props.site }
-					actionURL={ selectedSite.getRemoteManagementURL() + '&section=plugins' }
-					illustration= '/calypso/images/jetpack/jetpack-manage.svg'
+					section="plugins"
+					illustration="/calypso/images/jetpack/jetpack-manage.svg"
 					featureExample={ this.getMockPluginItems() } />
 			</MainComponent>
 		);
@@ -233,7 +241,7 @@ module.exports = React.createClass( {
 	render() {
 		const selectedSite = this.props.sites.getSelectedSite();
 		if ( this.state.accessError ||
-				( selectedSite && selectedSite.modulesFetched && ! selectedSite.canManage() )
+				( selectedSite && selectedSite.jetpack && ! selectedSite.canManage() )
 			) {
 			return this.renderAccessError( selectedSite );
 		}

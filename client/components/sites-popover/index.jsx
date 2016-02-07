@@ -8,7 +8,6 @@ var React = require( 'react' ),
  * Internal dependencies
  */
 var Popover = require( 'components/popover' ),
-	sitesList = require( 'lib/sites-list' )(),
 	hasTouch = require( 'lib/touch-detect' ).hasTouch,
 	SiteSelector = require( 'components/site-selector' );
 
@@ -16,10 +15,12 @@ module.exports = React.createClass( {
 	displayName: 'SitesPopover',
 
 	propTypes: {
+		sites: React.PropTypes.object,
 		context: React.PropTypes.object,
 		visible: React.PropTypes.bool,
 		onClose: React.PropTypes.func,
-		position: React.PropTypes.string
+		position: React.PropTypes.string,
+		groups: React.PropTypes.bool
 	},
 
 	getInitialState: function() {
@@ -32,7 +33,8 @@ module.exports = React.createClass( {
 		return {
 			visible: false,
 			onClose: noop,
-			position: 'bottom left'
+			position: 'bottom left',
+			groups: false
 		};
 	},
 
@@ -62,11 +64,12 @@ module.exports = React.createClass( {
 				className="popover sites-popover">
 				{ this.state.popoverVisible ?
 					<SiteSelector
-						sites={ sitesList }
+						sites={ this.props.sites }
 						siteBasePath="/post"
 						showAddNewSite={ false }
 						indicator={ false }
 						autoFocus={ ! hasTouch() }
+						groups={ true }
 						onClose={ this.props.onClose } /> : null }
 			</Popover>
 		);

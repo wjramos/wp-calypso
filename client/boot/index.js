@@ -11,7 +11,8 @@ var React = require( 'react' ),
 	page = require( 'page' ),
 	url = require( 'url' ),
 	qs = require( 'querystring' ),
-	injectTapEventPlugin = require( 'react-tap-event-plugin' );
+	injectTapEventPlugin = require( 'react-tap-event-plugin' ),
+	createReduxStoreFromPersistedInitialState = require( 'state/initial-state' ).default;
 
 /**
  * Internal dependencies
@@ -22,10 +23,12 @@ var config = require( 'config' ),
 	analytics = require( 'analytics' ),
 	route = require( 'lib/route' ),
 	user = require( 'lib/user' )(),
+	receiveUser = require( 'state/users/actions' ).receiveUser,
+	setCurrentUserId = require( 'state/current-user/actions' ).setCurrentUserId,
 	sites = require( 'lib/sites-list' )(),
 	superProps = require( 'analytics/super-props' ),
-	config = require( 'config' ),
 	i18n = require( 'lib/mixins/i18n' ),
+	perfmon = require( 'lib/perfmon' ),
 	translatorJumpstart = require( 'lib/translator-jumpstart' ),
 	translatorInvitation = require( 'layout/community-translator/invitation-utils' ),
 	layoutFocus = require( 'lib/layout-focus' ),
@@ -35,14 +38,12 @@ var config = require( 'config' ),
 	detectHistoryNavigation = require( 'lib/detect-history-navigation' ),
 	sections = require( 'sections' ),
 	touchDetect = require( 'lib/touch-detect' ),
+	setRouteAction = require( 'state/notices/actions' ).setRoute,
 	accessibleFocus = require( 'lib/accessible-focus' ),
 	TitleStore = require( 'lib/screen-title/store' ),
-	createReduxStore = require( 'lib/create-redux-store' ),
-	// The following mixins require i18n content, so must be required after i18n is initialized
-	Layout,
-	LoggedOutLayout;
-
-import { displayInviteAccepted } from 'lib/invites/actions';
+	renderWithReduxStore = require( 'lib/react-helpers' ).renderWithReduxStore,
+	// The following components require the i18n mixin, so must be required after i18n is initialized
+	Layout;
 
 function init() {
 	var i18nLocaleStringsObject = null;
@@ -80,16 +81,14 @@ function init() {
 	} );
 }
 
-function setUpContext( layout ) {
-	var reduxStore = createReduxStore();
-
+function setUpContext( layout, reduxStore ) {
 	// Pass the layout so that it is available to all page handlers
 	// and add query and hash objects onto context object
 	page( '*', function( context, next ) {
 		var parsed = url.parse( location.href, true );
 
 		context.layout = layout;
-		context.reduxStore = reduxStore;
+		context.store = reduxStore;
 
 		// Break routing and do full page load for logout link in /me
 		if ( context.pathname === '/wp-login.php' ) {
@@ -140,8 +139,6 @@ function loadDevModulesAndBoot() {
 }
 
 function boot() {
-	var layoutSection, layout, validSections = [];
-
 	init();
 
 	// When the user is bootstrapped, we also bootstrap the
@@ -156,34 +153,62 @@ function boot() {
 
 	translatorJumpstart.init();
 
+	createReduxStoreFromPersistedInitialState( reduxStoreReady );
+}
+
+function reduxStoreReady( reduxStore ) {
+	let layoutSection, layout, layoutElement, validSections = [];
+
+	if ( config.isEnabled( 'support-user' ) ) {
+		require( 'lib/user/support-user-interop' )( reduxStore );
+	}
+
+	Layout = require( 'layout' );
+
 	if ( user.get() ) {
 		// When logged in the analytics module requires user and superProps objects
 		// Inject these here
 		analytics.initialize( user, superProps );
 
+		// Set current user in Redux store
+		reduxStore.dispatch( receiveUser( user.get() ) );
+		reduxStore.dispatch( setCurrentUserId( user.get().ID ) );
+
 		// Create layout instance with current user prop
-		Layout = require( 'layout' );
-		layout = React.render( React.createElement( Layout, {
+		layoutElement = React.createElement( Layout, {
 			user: user,
 			sites: sites,
 			focus: layoutFocus,
 			nuxWelcome: nuxWelcome,
 			translatorInvitation: translatorInvitation
-		} ), document.getElementById( 'wpcom' ) );
+		} );
 	} else {
 		analytics.setSuperProps( superProps );
 
-		if ( config.isEnabled( 'oauth' ) ) {
-			LoggedOutLayout = require( 'layout/logged-out-oauth' );
+		if ( startsWith( window.location.pathname, '/design' ) ) {
+			Layout = require( 'layout/logged-out-design' );
+			layoutElement = React.createElement( Layout );
 		} else {
-			LoggedOutLayout = require( 'layout/logged-out' );
+			layoutElement = React.createElement( Layout, {
+				focus: layoutFocus
+			} );
 		}
-
-		layout = React.render(
-			React.createElement( LoggedOutLayout ),
-			document.getElementById( 'wpcom' )
-		);
 	}
+
+	if ( config.isEnabled( 'perfmon' ) ) {
+		// Record time spent watching slowly-flashing divs
+		perfmon();
+	}
+
+	if ( config.isEnabled( 'network-connection' ) ) {
+		require( 'lib/network-connection' ).init( reduxStore );
+	}
+
+	layout = renderWithReduxStore(
+		layoutElement,
+		document.getElementById( 'wpcom' ),
+		reduxStore
+	);
 
 	debug( 'Main layout rendered.' );
 
@@ -195,8 +220,7 @@ function boot() {
 		window.history.replaceState( null, document.title, window.location.pathname );
 	}
 
-	setUpContext( layout );
-
+	setUpContext( layout, reduxStore );
 	page( '*', require( 'lib/route/normalize' ) );
 
 	// warn against navigating from changed, unsaved forms
@@ -233,11 +257,6 @@ function boot() {
 			nuxWelcome.clearTempWelcome();
 		}
 
-		if ( context.query.invite_accepted ) {
-			displayInviteAccepted( parseInt( context.query.invite_accepted ) );
-			page( context.pathname );
-		}
-
 		// Bump general stat tracking overall Newdash usage
 		analytics.mc.bumpStat( { newdash_pageviews: 'route' } );
 
@@ -256,9 +275,6 @@ function boot() {
 		emailVerification.renderNotice( context );
 		next();
 	} );
-
-	// clear notices
-	page( '*', require( 'notices' ).clearNoticesOnNavigation );
 
 	if ( config.isEnabled( 'oauth' ) ) {
 		// Forces OAuth users to the /login page if no token is present
@@ -308,16 +324,22 @@ function boot() {
 
 	require( 'my-sites' )();
 
+	// clear notices
+	page( '*', function( context, next ) {
+		context.store.dispatch( setRouteAction( context.pathname ) );
+		next();
+	} );
+
+	// clear notices
+	//TODO: remove this one when notices are reduxified - it is for old notices
+	page( '*', require( 'notices' ).clearNoticesOnNavigation );
+
 	if ( config.isEnabled( 'olark' ) ) {
 		require( 'lib/olark' );
 	}
 
 	if ( config.isEnabled( 'keyboard-shortcuts' ) ) {
 		require( 'lib/keyboard-shortcuts/global' )( sites );
-	}
-
-	if ( config.isEnabled( 'network-connection' ) ) {
-		require( 'lib/network-connection' ).init();
 	}
 
 	if ( config.isEnabled( 'desktop' ) ) {

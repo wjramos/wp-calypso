@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-var React = require( 'react/addons' ),
+var React = require( 'react' ),
 	startsWith = require( 'lodash/string/startsWith' ),
 	Dispatcher = require( 'dispatcher' ),
 	find = require( 'lodash/collection/find' ),
@@ -16,7 +16,8 @@ var React = require( 'react/addons' ),
 /**
  * Internal dependencies
  */
-var SectionNav = require( 'components/section-nav' ),
+var config = require( 'config' ),
+	SectionNav = require( 'components/section-nav' ),
 	NavTabs = require( 'components/section-nav/tabs' ),
 	NavItem = require( 'components/section-nav/item' ),
 	upgradesPaths = require( 'my-sites/upgrades/paths' ),
@@ -29,6 +30,12 @@ var SectionNav = require( 'components/section-nav' ),
 // remaining paths will make the button highlighted on that page.
 
 var NAV_ITEMS = {
+	Addons: {
+		paths: [ '/plans' ],
+		label: i18n.translate( 'Add-ons for Jetpack sites' ),
+		allSitesPath: false
+	},
+
 	Plans: {
 		paths: [ '/plans' ],
 		label: i18n.translate( 'Plans' ),
@@ -110,7 +117,7 @@ var UpgradesNavigation = React.createClass( {
 		var items;
 
 		if ( this.props.selectedSite.jetpack ) {
-			items = [ 'Plans' ];
+			items = [ 'Addons' ];
 		} else {
 			items = [ 'Plans', 'Domains', 'Email' ];
 		}
@@ -171,6 +178,10 @@ var UpgradesNavigation = React.createClass( {
 	},
 
 	cartToggleButton: function() {
+		if ( ! config.isEnabled( 'upgrades/checkout' ) ) {
+			return null;
+		}
+
 		return (
 			<PopoverCart
 				cart={ this.props.cart }

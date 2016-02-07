@@ -1,7 +1,8 @@
 /**
  * External dependencies
  */
-import React from 'react/addons';
+import React from 'react';
+import PureRenderMixin from 'react-pure-render/mixin';
 import classnames from 'classnames';
 import debugModule from 'debug';
 
@@ -36,10 +37,12 @@ const WebPreview = React.createClass( {
 		// Called when the preview is closed, either via the 'X' button or the escape key
 		onClose: React.PropTypes.func,
 		// Optional loading message to display during loading
-		loadingMessage: React.PropTypes.string
+		loadingMessage: React.PropTypes.string,
+		// The iframe's title element, used for accessibility purposes
+		iframeTitle: React.PropTypes.string
 	},
 
-	mixins: [ React.addons.PureRenderMixin ],
+	mixins: [ PureRenderMixin ],
 
 	getDefaultProps() {
 		return {
@@ -173,6 +176,7 @@ const WebPreview = React.createClass( {
 								className="web-preview__frame"
 								src={ this.state.iframeUrl }
 								onLoad={ this.setLoaded }
+								title={ this.props.iframeTitle || this.translate( 'Preview' ) }
 							/>
 						}
 					</div>

@@ -8,8 +8,10 @@ import { connect } from 'react-redux';
  * Internal dependencies
  */
 import PostEditStore from 'lib/posts/post-edit-store';
-import { fetchConnections } from 'lib/sharing/publicize/actions';
-import { getConnectionsBySiteIdAvailableToCurrentUser, hasFetchedConnections } from 'lib/sharing/publicize/selectors';
+import { fetchConnections } from 'state/sharing/publicize/actions';
+import { getSiteUserConnections, hasFetchedConnections } from 'state/sharing/publicize/selectors';
+import { getCurrentUser } from 'state/current-user/selectors';
+import { getSelectedSite } from 'state/ui/selectors';
 import EditorSharingAccordion from './accordion';
 
 class EditorSharingContainer extends Component {
@@ -19,12 +21,13 @@ class EditorSharingContainer extends Component {
 		// Set state
 		this.state = this.getState();
 
-		// Trigger connection fetch
-		this.ensureHasConnections();
-
 		// Bind legacy store update handler
 		this.boundUpdateState = this.updateState.bind( this );
 		PostEditStore.on( 'change', this.boundUpdateState );
+	}
+
+	componentDidMount() {
+		this.ensureHasConnections();
 	}
 
 	componentDidUpdate() {
@@ -81,17 +84,18 @@ class EditorSharingContainer extends Component {
 
 EditorSharingContainer.propTypes = {
 	site: PropTypes.object,
-	currentUserID: PropTypes.number.isRequired,
 	dispatch: PropTypes.func.isRequired,
 	hasFetchedConnections: PropTypes.bool,
 	connections: PropTypes.array
 };
 
-export default connect(
-	( state, props ) => {
-		return {
-			hasFetchedConnections: props.site && hasFetchedConnections( state, props.site.ID ),
-			connections: props.site ? getConnectionsBySiteIdAvailableToCurrentUser( state, props.site.ID, props.currentUserID ) : null
-		};
-	}
-)( EditorSharingContainer );
+export default connect( ( state ) => {
+	const site = getSelectedSite( state );
+	const user = getCurrentUser( state );
+
+	return {
+		hasFetchedConnections: site && hasFetchedConnections( state, site.ID ),
+		connections: site && user ? getSiteUserConnections( state, site.ID, user.ID ) : null,
+		site
+	};
+} )( EditorSharingContainer );

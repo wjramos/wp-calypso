@@ -1,7 +1,9 @@
 /**
  * External dependencies
  */
-var React = require( 'react/addons' ),
+var ReactDom = require( 'react-dom' ),
+	React = require( 'react' ),
+	createFragment = require( 'react-addons-create-fragment' ),
 	without = require( 'lodash/array/without' ),
 	includes = require( 'lodash/collection/includes' ),
 	classNames = require( 'classnames' ),
@@ -150,7 +152,12 @@ module.exports = React.createClass( {
 			return false;
 		}
 
-		rect = this.refs.zone.getDOMNode().getBoundingClientRect();
+		rect = this.refs.zone.getBoundingClientRect();
+
+		/// make sure the rect is a valid rect
+		if ( rect.bottom === rect.top || rect.left === rect.right ) {
+			return false;
+		}
 
 		return x >= rect.left && x <= rect.right &&
 			y >= rect.top && y <= rect.bottom;
@@ -166,7 +173,7 @@ module.exports = React.createClass( {
 			isDraggingOverElement: false
 		} );
 
-		if ( ! this.props.fullScreen && ! React.findDOMNode( this.refs.zone ).contains( event.target ) ) {
+		if ( ! this.props.fullScreen && ! ReactDom.findDOMNode( this.refs.zone ).contains( event.target ) ) {
 			return;
 		}
 
@@ -190,7 +197,7 @@ module.exports = React.createClass( {
 		if ( this.props.children ) {
 			content = this.props.children;
 		} else {
-			content = React.addons.createFragment( {
+			content = createFragment( {
 				icon: <span className={ classNames( 'drop-zone__content-icon', this.props.icon ) } />,
 				text: (
 					<span className="drop-zone__content-text">

@@ -8,7 +8,8 @@
 /**
  * External dependencies
  */
-var React = require( 'react' ),
+var ReactDom = require( 'react-dom' ),
+	React = require( 'react' ),
 	tinymce = require( 'tinymce/tinymce' );
 
 /**
@@ -26,13 +27,13 @@ function wpLink( editor ) {
 	} );
 
 	editor.on( 'remove', function() {
-		React.unmountComponentAtNode( node );
+		ReactDom.unmountComponentAtNode( node );
 		node.parentNode.removeChild( node );
 		node = null;
 	} );
 
 	editor.addCommand( 'WP_Link', function() {
-		React.render(
+		ReactDom.render(
 			React.createElement( LinkDialog, {
 				visible: true,
 				editor: editor
@@ -42,10 +43,9 @@ function wpLink( editor ) {
 	} );
 
 	// WP default shortcut
-	editor.addShortcut( 'Alt+Shift+A', '', 'WP_Link' );
-
+	editor.addShortcut( 'access+a', '', 'WP_Link' );
 	// The "de-facto standard" shortcut, see #27305
-	editor.addShortcut( 'Meta+K', '', 'WP_Link' );
+	editor.addShortcut( 'meta+k', '', 'WP_Link' );
 
 	editor.addButton( 'link', {
 		icon: 'link',

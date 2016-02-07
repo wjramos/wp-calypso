@@ -2,18 +2,24 @@
  * External dependencies
  */
 var React = require( 'react' ),
-	classNames = require( 'classnames' );
+	classNames = require( 'classnames' ),
+	find = require( 'lodash/collection/find' );
 
 /**
  * Internal dependencies
  */
-var analytics = require( 'analytics' ),
+var abtest = require( 'lib/abtest' ).abtest,
+	analytics = require( 'analytics' ),
+	testFeatures = require( 'lib/features-list/test-features' ),
 	Gridicon = require( 'components/gridicon' ),
+	isJetpackPlan = require( 'lib/products-values' ).isJetpackPlan,
+	JetpackPlanDetails = require( 'my-sites/plans/jetpack-plan-details' ),
 	PlanActions = require( 'components/plans/plan-actions' ),
 	PlanHeader = require( 'components/plans/plan-header' ),
 	PlanPrice = require( 'components/plans/plan-price' ),
 	PlanDiscountMessage = require( 'components/plans/plan-discount-message' ),
-	Card = require( 'components/card' );
+	Card = require( 'components/card' ),
+	WpcomPlanDetails = require( 'my-sites/plans/wpcom-plan-details' );
 
 module.exports = React.createClass( {
 	displayName: 'Plan',
@@ -36,6 +42,7 @@ module.exports = React.createClass( {
 
 	getDescription: function() {
 		var comparePlansUrl, siteSuffix;
+		const { plan, site } = this.props;
 
 		if ( this.isPlaceholder() ) {
 			return (
@@ -47,16 +54,44 @@ module.exports = React.createClass( {
 			);
 		}
 
-		siteSuffix = this.props.site ? this.props.site.slug : '';
+		siteSuffix = site ? site.slug : '';
 		comparePlansUrl = this.props.comparePlansUrl ? this.props.comparePlansUrl : '/plans/compare/' + siteSuffix;
 
+		if ( site && site.jetpack ) {
+			return (
+				<JetpackPlanDetails plan={ plan } />
+			);
+		}
+
 		return (
-			<div>
-				<p>{ this.props.plan.shortdesc }</p>
-				<a href={ comparePlansUrl } onClick={ this.handleLearnMoreClick }
-					className="plan__learn-more">{ this.translate( 'Learn more', { context: 'Find out more details about a plan' } ) }</a>
-			</div>
+			<WpcomPlanDetails
+				comparePlansUrl={ comparePlansUrl }
+				handleLearnMoreClick={ this.handleLearnMoreClick }
+				plan={ plan } />
 		);
+	},
+
+	getFeatureList: function() {
+		var features;
+
+		if ( this.isPlaceholder() ) {
+			return;
+		}
+
+		features = testFeatures[ this.props.plan.product_slug ].map( function( feature, i ) {
+			var classes = classNames( 'plan__feature', {
+				'is-plan-specific': feature.planSpecific
+			} );
+
+			return (
+				<li className={ classes } key={ i }>
+					<Gridicon icon="checkmark" size={ 12 } />
+					{ feature.text }
+				</li>
+			);
+		} );
+
+		return <ul className="plan__features">{ features }</ul>;
 	},
 
 	showDetails: function() {
@@ -73,12 +108,12 @@ module.exports = React.createClass( {
 		return this.props.placeholder;
 	},
 
-	getProductId: function() {
+	getProductSlug: function() {
 		if ( this.isPlaceholder() ) {
 			return;
 		}
 
-		return this.props.plan.product_id;
+		return this.props.plan.product_slug;
 	},
 
 	getClassNames: function() {
@@ -97,31 +132,31 @@ module.exports = React.createClass( {
 		return classNames( classObject );
 	},
 
-	getSiteSpecificPlanDetails: function() {
+	getSitePlan: function() {
 		if ( this.isPlaceholder() || ! this.props.site ) {
 			return;
 		}
 
-		return this.props.siteSpecificPlansDetailsList.get( this.props.site.domain, this.getProductId() );
+		return find( this.props.sitePlans.data, { productSlug: this.getProductSlug() } );
 	},
 
 	getPlanDiscountMessage: function() {
-		if ( this.isPlaceholder() ) {
+		if ( this.isPlaceholder() || this.props.hideDiscountMessage ) {
 			return;
 		}
 
 		return (
 			<PlanDiscountMessage
 				plan={ this.props.plan }
-				siteSpecificPlansDetails={ this.getSiteSpecificPlanDetails() }
+				sitePlan={ this.getSitePlan() }
 				site={ this.props.site }
 				showMostPopularMessage={ true }/>
 		);
 	},
 
 	getBadge: function() {
-		if ( this.props.site ) {
-			if ( this.props.site.plan.product_id === this.getProductId() ) {
+		if ( this.props.site && ! this.props.site.jetpack ) {
+			if ( this.props.site.plan.product_slug === this.getProductSlug() ) {
 				return (
 					<Gridicon icon="checkmark-circle" />
 				);
@@ -155,7 +190,8 @@ module.exports = React.createClass( {
 			<PlanPrice
 				plan={ this.props.plan }
 				isPlaceholder={ this.isPlaceholder() }
-				siteSpecificPlansDetails={ this.getSiteSpecificPlanDetails() }
+				isInSignup={ this.props.isInSignup }
+				sitePlan={ this.getSitePlan() }
 				site={ this.props.site } />
 		);
 	},
@@ -166,9 +202,10 @@ module.exports = React.createClass( {
 				plan={ this.props.plan }
 				isInSignup={ this.props.isInSignup }
 				onSelectPlan={ this.props.onSelectPlan }
-				siteSpecificPlansDetails={ this.getSiteSpecificPlanDetails() }
+				sitePlan={ this.getSitePlan() }
 				site={ this.props.site }
 				cart={ this.props.cart }
+				enableFreeTrials={ this.props.enableFreeTrials }
 				isPlaceholder={ this.isPlaceholder() }/>
 		);
 	},
@@ -179,17 +216,19 @@ module.exports = React.createClass( {
 				plan={ this.props.plan }
 				isInSignup={ this.props.isInSignup }
 				onSelectPlan={ this.props.onSelectPlan }
-				siteSpecificPlansDetails={ this.getSiteSpecificPlanDetails() }
+				sitePlan={ this.getSitePlan() }
 				site={ this.props.site }
 				cart={ this.props.cart }
+				enableFreeTrials={ this.props.enableFreeTrials }
 				isPlaceholder={ this.isPlaceholder() }
 				isImageButton />
 		);
 	},
 
 	render: function() {
+		var shouldDisplayFeatureList = this.props.plan && ! isJetpackPlan( this.props.plan ) && abtest( 'plansFeatureList' ) === 'list';
 		return (
-			<Card className={ this.getClassNames() } key={ this.getProductId() } onClick={ this.showDetails }>
+			<Card className={ this.getClassNames() } key={ this.getProductSlug() } onClick={ this.showDetails }>
 				{ this.getPlanDiscountMessage() }
 				<PlanHeader onClick={ this.showDetails } text={ this.getProductName() } isPlaceholder={ this.isPlaceholder() }>
 					{ this.getBadge() }
@@ -201,7 +240,7 @@ module.exports = React.createClass( {
 				</PlanHeader>
 				<div className="plan__plan-expand">
 					<div className="plan__plan-details">
-						{ this.getDescription() }
+						{ shouldDisplayFeatureList ? this.getFeatureList() : this.getDescription() }
 					</div>
 					{ this.getPlanActions() }
 				</div>

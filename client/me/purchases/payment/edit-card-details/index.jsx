@@ -11,6 +11,7 @@ import React from 'react';
 import analytics from 'analytics';
 import camelCase from 'lodash/string/camelCase';
 import Card from 'components/card';
+import { clearPurchases } from 'lib/upgrades/actions/purchases';
 import CompactCard from 'components/card/compact';
 import { createPaygateToken } from 'lib/store-transactions';
 import CreditCardForm from 'components/upgrades/credit-card-form';
@@ -71,7 +72,10 @@ const EditCardDetails = React.createClass( {
 	componentWillMount() {
 		recordPageView( 'edit_card_details', this.props );
 
-		const fields = this.mergeCard( this.props.card, formState.createNullFieldValues( this.fieldNames ) );
+		let fields = formState.createNullFieldValues( this.fieldNames );
+		if ( this.props.card.data ) {
+			fields = this.mergeCard( this.props.card.data, fields );
+		}
 
 		this.formStateController = formState.Controller( {
 			initialFields: fields,
@@ -141,7 +145,7 @@ const EditCardDetails = React.createClass( {
 			{ product_slug: getPurchase( this.props ).productSlug }
 		);
 
-		createPaygateToken( cardDetails, ( paygateError, token ) => {
+		createPaygateToken( 'card_update', cardDetails, ( paygateError, token ) => {
 			if ( paygateError ) {
 				notices.error( paygateError.message );
 				return;
@@ -161,6 +165,8 @@ const EditCardDetails = React.createClass( {
 				notices.success( response.success, {
 					persistent: true
 				} );
+
+				clearPurchases();
 
 				const { id } = getPurchase( this.props );
 
@@ -232,7 +238,7 @@ const EditCardDetails = React.createClass( {
 						<em>{ this.translate( 'All fields required' ) }</em>
 
 						<FormButton type="submit">
-							{ this.translate( 'Update Card', { context: 'Button label', comment: 'Credit card' } ) }
+							{ this.translate( 'Save Card', { context: 'Button label', comment: 'Credit card' } ) }
 						</FormButton>
 					</CompactCard>
 				</form>

@@ -9,6 +9,7 @@ var React = require( 'react' ),
  * Internal dependencies
  */
 var productsList = require( 'lib/products-list' )(),
+	getABTestVariation = require( 'lib/abtest' ).getABTestVariation,
 	analytics = require( 'analytics' ),
 	featuresList = require( 'lib/features-list' )(),
 	plansList = require( 'lib/plans-list' )(),
@@ -80,19 +81,29 @@ module.exports = React.createClass( {
 		analytics.tracks.recordEvent( 'calypso_signup_compare_plans_click', { location: linkLocation } );
 	},
 
+	areFreeTrialsEnabled: function() {
+		if ( this.props.enableFreeTrials ) {
+			return true;
+		}
+
+		return getABTestVariation( 'freeTrials' ) === 'offered' && 'free-trial' === this.props.flowName;
+	},
+
 	plansList: function() {
 		return (
 			<div>
 				<PlanList
 					plans={ this.state.plans }
 					comparePlansUrl={ this.comparePlansUrl() }
+					enableFreeTrials={ this.areFreeTrialsEnabled() }
+					hideFreePlan={ this.props.hideFreePlan }
 					isInSignup={ true }
 					onSelectPlan={ this.onSelectPlan } />
 				<a
 					href={ this.comparePlansUrl() }
-					className='plans-step__compare-plans-link'
+					className="plans-step__compare-plans-link"
 					onClick={ this.handleComparePlansLinkClick.bind( null, 'footer' ) }>
-						<Gridicon icon="clipboard" size="18" />
+						<Gridicon icon="clipboard" size={ 18 } />
 						{ this.translate( 'Compare Plans' ) }
 				</a>
 			</div>
@@ -101,12 +112,21 @@ module.exports = React.createClass( {
 
 	plansSelection: function() {
 		let headerText = this.translate( 'Pick a plan that\'s right for you.' ),
+			subHeaderText;
+
+		if ( this.areFreeTrialsEnabled() && getABTestVariation( 'freeTrials' ) === 'offered' ) {
 			subHeaderText = this.translate(
-				'Not sure which plan to choose? Take a look at our {{a}}plan comparison chart{{/a}}.',
-				{ components: { a: <a
-					href={ this.comparePlansUrl() }
-					onClick={ this.handleComparePlansLinkClick.bind( null, 'header' ) } /> } }
+				'Try WordPress.com Premium or Business free for 14 days, no credit card required.'
 			);
+		} else {
+			subHeaderText = this.translate(
+				'Not sure which plan to choose? Take a look at our {{a}}plan comparison chart{{/a}}.', {
+					components: { a: <a
+						href={ this.comparePlansUrl() }
+						onClick={ this.handleComparePlansLinkClick.bind( null, 'header' ) } /> }
+				}
+			);
+		}
 
 		return (
 			<StepWrapper
@@ -125,6 +145,8 @@ module.exports = React.createClass( {
 	plansCompare: function() {
 		return <PlansCompare
 			className="plans-step__compare"
+			enableFreeTrials={ this.areFreeTrialsEnabled() }
+			hideFreePlan={ this.props.hideFreePlan }
 			onSelectPlan={ this.onSelectPlan }
 			isInSignup={ true }
 			backUrl={ this.props.path.replace( '/compare', '' ) }
@@ -136,9 +158,9 @@ module.exports = React.createClass( {
 	render: function() {
 		return <div className="plans plans-step has-no-sidebar">
 			{
-				'compare' === this.props.stepSectionName ?
-				this.plansCompare() :
-				this.plansSelection()
+				'compare' === this.props.stepSectionName
+				? this.plansCompare()
+				: this.plansSelection()
 			}
 		</div>;
 	}

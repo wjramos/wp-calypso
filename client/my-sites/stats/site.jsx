@@ -12,11 +12,11 @@ var page = require( 'page' ),
  */
 var StatsNavigation = require( './stats-navigation' ),
 	SidebarNavigation = require( 'my-sites/sidebar-navigation' ),
-	DatePicker = require( './module-date-picker' ),
-	Countries = require( './module-countries' ),
-	Comments = require( './module-comments' ),
-	Followers = require( './module-followers' ),
-	ChartTabs = require( './module-chart-tabs' ),
+	DatePicker = require( './stats-date-picker' ),
+	Comments = require( './stats-comments' ),
+	Countries = require( './stats-countries' ),
+	Followers = require( './stats-followers' ),
+	ChartTabs = require( './stats-chart-tabs' ),
 	StatsModule = require( './stats-module' ),
 	statsStrings = require( './stats-strings' ),
 	titlecase = require( 'to-title-case' ),
@@ -94,12 +94,6 @@ module.exports = React.createClass( {
 		analytics.ga.recordEvent( 'Stats', 'Clicked Visit Old Stats Page Button', oldStatsLocation );
 	},
 
-	trackOtherStats: function() {
-		analytics.mc.bumpStat( 'calypso_stats_other_recent', 'click' );
-		analytics.ga.recordEvent( 'Stats', 'Clicked Other Recent Stats Link' );
-		analytics.tracks.recordEvent( 'calypso_stats_other_recent_click' );
-	},
-
 	barClick: function( bar ) {
 		analytics.ga.recordEvent( 'Stats', 'Clicked Chart Bar' );
 		page.redirect( this.props.path + '?startDate=' + bar.data.period );
@@ -175,70 +169,6 @@ module.exports = React.createClass( {
 					date={ queryDate }
 					beforeNavigate={ this.updateScrollPosition } />;
 			}
-		}
-
-		if ( config.isEnabled( 'manage/stats/insights' ) ) {
-			nonPeriodicModules = (
-				<div className="stats-nonperiodic has-no-recent">
-					<h3 className="stats-section-title">
-						{ this.translate( 'Other Recent Stats', {
-							context: 'Header on the Stats page',
-							comment: 'This header is important as stats below it do not conform to the time period selection that affects all panels above it.'
-						} ) }
-					</h3>
-					<p>
-						{ this.translate( 'Looking for your {{recent}}Other Recent Stats{{/recent}}? We\'ve moved them to the {{insights}}Insights{{/insights}} page. ', {
-							components: {
-								recent: <a href={ '/stats/insights/' + site.slug } onClick={ this.trackOtherStats } />,
-								insights: <a href={ '/stats/insights/' + site.slug } onClick={ this.trackOtherStats } />
-							},
-							context: 'Stats: Text at the bottom of the period pages pointing toward the insights page'
-						} ) }
-					</p>
-				</div>
-			);
-		} else {
-			nonPeriodicModules = (
-				<div className="stats-nonperiodic has-recent">
-					<h3 className="stats-section-title">
-						{ this.translate( 'Other Recent Stats', {
-							context: 'Header on the Stats page',
-							comment: 'This header is important as stats below it do not conform to the time period selection that affects all panels above it.'
-						} ) }
-					</h3>
-					<div className="module-list">
-						<div className="module-column">
-							<Comments
-								path={ 'comments' }
-								site={ site }
-								commentsList={ this.props.commentsList }
-								period={ this.props.period }
-								date={ queryDate }
-								followList={ this.props.followList }
-								commentFollowersList={ this.props.commentFollowersList } />
-							{ tagsList }
-						</div>
-						<div className="module-column">
-							<Followers
-								path={ 'followers' }
-								site={ site }
-								wpcomFollowersList={ this.props.wpcomFollowersList }
-								emailFollowersList={ this.props.emailFollowersList }
-								period={ this.props.period }
-								date={ queryDate }
-								followList={ this.props.followList } />
-							<StatsModule
-								path={ 'publicize' }
-								moduleStrings={ moduleStrings.publicize }
-								site={ site }
-								dataList={ this.props.publicizeList }
-								period={ this.props.period }
-								date={ queryDate } />
-						</div>
-					</div>
-					<div className="old-stats-link">{ oldStatsMessage }</div>
-				</div>
-			);
 		}
 
 		return (

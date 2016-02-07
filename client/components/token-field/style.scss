@@ -26,7 +26,8 @@
 .token-field__input-container {
 	display: flex;
 	flex-wrap: wrap;
-	padding: 7px 14px 0 0;
+	align-items: flex-start;
+	padding: 5px 14px 5px 0;
 }
 
 // Token input
@@ -34,8 +35,8 @@ input[type="text"].token-field__input {
 	display: inline-block;
 	width: auto;
 	max-width: 100%;
-	margin: 0 0 7px 5px;
-	padding: 2px 0 2px 7px;
+	margin: 0 0 0 4px;
+	padding: 2px 0 2px 4px;
 	background: inherit;
 	border: 0;
 	outline: none;
@@ -51,13 +52,11 @@ input[type="text"].token-field__input {
 // Tokens
 .token-field__token {
 	font-size: 14px;
-	display: inline-block;
+	display: flex;
 	margin: 2px 0 2px 8px;
 	padding: 0;
 	color: $white;
 	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
 }
 
 .token-field__token-text, .token-field__remove-token {
@@ -69,6 +68,9 @@ input[type="text"].token-field__input {
 .token-field__token-text {
 	border-radius: 4px 0 0 4px;
 	padding: 0 4px 0 6px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .token-field__remove-token {

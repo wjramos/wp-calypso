@@ -48,17 +48,32 @@ function getLocation() {
 	if ( path.indexOf( '/following/edit' ) === 0 ) {
 		return 'following_edit';
 	}
+	if ( path.indexOf( '/discover' ) === 0 ) {
+		return 'discover';
+	}
 	return 'unknown';
 }
 
-export function recordFollow() {
-	mc.bumpStat( 'reader_follows', getLocation() );
-	tracks.recordEvent( 'calypso_reader_site_followed' );
+export function recordFollow( url ) {
+	const source = getLocation();
+	mc.bumpStat( 'reader_follows', source );
+	recordAction( 'followed_blog' );
+	recordGaEvent( 'Clicked Follow Blog', source )
+	tracks.recordEvent( 'calypso_reader_site_followed', {
+		url,
+		source
+	} );
 }
 
-export function recordUnfollow() {
-	mc.bumpStat( 'reader_unfollows', getLocation() );
-	tracks.recordEvent( 'calypso_reader_site_unfollowed' );
+export function recordUnfollow( url ) {
+	const source = getLocation();
+	mc.bumpStat( 'reader_unfollows', source );
+	recordAction( 'unfollowed_blog' );
+	recordGaEvent( 'Clicked Unfollow Blog', source )
+	tracks.recordEvent( 'calypso_reader_site_unfollowed', {
+		url,
+		source
+	} );
 }
 
 export function recordTrack( eventName, eventProperties ) {

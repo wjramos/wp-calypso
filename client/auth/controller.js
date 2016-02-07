@@ -1,6 +1,7 @@
 /**
  * External dependencies
  */
+import ReactDom from 'react-dom';
 import React from 'react';
 import startsWith from 'lodash/string/startsWith';
 import page from 'page';
@@ -8,15 +9,18 @@ import page from 'page';
 /**
  * Internal dependencies
  */
+import { setSection } from 'state/ui/actions';
 import LoginComponent from './login';
 import * as OAuthToken from 'lib/oauth-token';
 
 module.exports = {
-	login: function() {
+	login: function( context ) {
 		if ( OAuthToken.getToken() ) {
 			page( '/' );
 		} else {
-			React.render(
+			context.store.dispatch( setSection( 'login', { hasSidebar: false } ) );
+
+			ReactDom.render(
 				React.createElement( LoginComponent, {} ),
 				document.getElementById( 'primary' )
 			);

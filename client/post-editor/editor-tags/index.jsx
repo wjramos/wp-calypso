@@ -2,7 +2,7 @@
  * External dependencies
  */
 import React from 'react';
-import { unescapeAndFormatSpaces } from 'lib/formatting';
+import unescapeString from 'lodash/string/unescape';
 import _debug from 'debug';
 
 /**
@@ -15,7 +15,7 @@ import { recordStat, recordEvent } from 'lib/posts/stats';
 import { isPage } from 'lib/posts/utils';
 import InfoPopover from 'components/info-popover';
 
- const debug = _debug( 'calypso:post-editor:editor-tags' );
+const debug = _debug( 'calypso:post-editor:editor-tags' );
 
 module.exports = React.createClass( {
 	displayName: 'EditorTags',
@@ -78,7 +78,7 @@ module.exports = React.createClass( {
 				</span>
 				<TokenField
 					value={ this.getPostTags() }
-					valueTransform={ unescapeAndFormatSpaces }
+					displayTransform={ unescapeString }
 					suggestions={ tagNames }
 					onChange={ this.onTagsChange }
 					maxSuggestions={ TermsConstants.MAX_TAGS_SUGGESTIONS }

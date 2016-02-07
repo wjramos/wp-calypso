@@ -1,19 +1,19 @@
 /**
 * External dependencies
 */
-var React = require( 'react' );
+var React = require( 'react' ),
+	PureRenderMixin = require( 'react-pure-render/mixin' );
 
 /**
  * Internal dependencies
  */
 var SectionHeader = require( 'components/section-header' ),
-	SectionHeaderButton = require( 'components/section-header/button' ),
-	Card = require( 'components/card' );
+	Button = require( 'components/button' );
 
 var Cards = React.createClass( {
 	displayName: 'SectionHeader',
 
-	mixins: [ React.addons.PureRenderMixin ],
+	mixins: [ PureRenderMixin ],
 
 	render: function() {
 		return (
@@ -22,18 +22,22 @@ var Cards = React.createClass( {
 					<a href="/devdocs/design/section-header">Section Header</a>
 				</h2>
 
-				<SectionHeader label="Team" count={ 10 }>
-					<SectionHeaderButton>Manage</SectionHeaderButton>
-					<SectionHeaderButton onClick={ function() {
-						alert( 'Clicked add button' );
-					} }>
-						Add
-					</SectionHeaderButton>
+				<SectionHeader label={ this.translate( 'Team' ) } count={ 10 }>
+					<Button compact primary>
+						{ this.translate( 'Primary Action' ) }
+					</Button>
+					<Button compact>
+						{ this.translate( 'Manage' ) }
+					</Button>
+					<Button
+						compact
+						onClick={ function() {
+							alert( 'Clicked add button' );
+						} }
+					>
+						{ this.translate( 'Add' ) }
+					</Button>
 				</SectionHeader>
-
-				<Card>
-					Content here
-				</Card>
 			</div>
 		);
 	}

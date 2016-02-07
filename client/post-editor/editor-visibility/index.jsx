@@ -1,6 +1,7 @@
 /**
  * External dependencies
  */
+import ReactDom from 'react-dom';
 import React from 'react';
 import includes from 'lodash/collection/includes';
 import classNames from 'classnames';
@@ -107,7 +108,7 @@ module.exports = React.createClass( {
 			return true;
 		}
 
-		password = React.findDOMNode( this.refs.postPassword ).value.trim();
+		password = ReactDom.findDOMNode( this.refs.postPassword ).value.trim();
 
 		return password.length;
 	},
@@ -177,7 +178,7 @@ module.exports = React.createClass( {
 	onKey( event ) {
 		var password;
 
-		password = React.findDOMNode( this.refs.postPassword ).value.trim();
+		password = ReactDom.findDOMNode( this.refs.postPassword ).value.trim();
 
 		if ( event.key === 'Backspace' &&
 			! password.length ) {
@@ -322,7 +323,7 @@ module.exports = React.createClass( {
 				<Tooltip
 					context={ this.refs && this.refs.setVisibility }
 					isVisible={ this.state.tooltip && ! this.state.showPopover }
-					position="bottom"
+					position="bottom left"
 				>
 					{ this.translate( 'Edit visibility', { context: 'Editor: Tooltip shown on icon to change the post\'s visibility.' } ) }
 				</Tooltip>

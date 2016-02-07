@@ -2,6 +2,7 @@
  * External dependencies
  */
 var React = require( 'react' ),
+	connect = require( 'react-redux' ).connect,
 	reject = require( 'lodash/collection/reject' ),
 	classNames = require( 'classnames' );
 
@@ -14,8 +15,12 @@ var CartBody = require( './cart-body' ),
 	Popover = require( 'components/popover' ),
 	CartEmpty = require( './cart-empty' ),
 	CartPlanAd = require( './cart-plan-ad' ),
+	CartTrialAd = require( './cart-trial-ad' ),
 	isCredits = require( 'lib/products-values' ).isCredits,
-	Gridicon = require( 'components/gridicon' );
+	Gridicon = require( 'components/gridicon' ),
+	fetchSitePlans = require( 'state/sites/plans/actions' ).fetchSitePlans,
+	getPlansBySite = require( 'state/sites/plans/selectors' ).getPlansBySite,
+	shouldFetchSitePlans = require( 'lib/plans' ).shouldFetchSitePlans;
 
 var PopoverCart = React.createClass( {
 	propTypes: {
@@ -30,6 +35,10 @@ var PopoverCart = React.createClass( {
 		pinned: React.PropTypes.bool.isRequired,
 		showKeepSearching: React.PropTypes.bool.isRequired,
 		onKeepSearchingClick: React.PropTypes.func.isRequired
+	},
+
+	componentDidMount: function() {
+		this.props.fetchSitePlans( this.props.sitePlans, this.props.selectedSite );
 	},
 
 	itemCount: function() {
@@ -108,7 +117,14 @@ var PopoverCart = React.createClass( {
 
 		return (
 			<div>
-				<CartPlanAd cart={ this.props.cart } selectedSite={ this.props.selectedSite } />
+				<CartTrialAd
+					cart={ this.props.cart }
+					selectedSite={ this.props.selectedSite }
+					sitePlans={ this.props.sitePlans } />
+
+				<CartPlanAd
+					cart={ this.props.cart }
+					selectedSite={ this.props.selectedSite } />
 
 				<CartBody
 					collapse={ true }
@@ -140,4 +156,17 @@ var PopoverCart = React.createClass( {
 	}
 } );
 
-module.exports = PopoverCart;
+module.exports = connect(
+	function( state, props ) {
+		return { sitePlans: getPlansBySite( state, props.selectedSite ) };
+	},
+	function( dispatch ) {
+		return {
+			fetchSitePlans( sitePlans, site ) {
+				if ( shouldFetchSitePlans( sitePlans, site ) ) {
+					dispatch( fetchSitePlans( site.ID ) );
+				}
+			}
+		};
+	}
+)( PopoverCart );

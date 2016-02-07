@@ -1,17 +1,19 @@
 /**
  * External dependencies
  */
-var React = require( 'react' );
+import React from 'react';
+import PureRenderMixin from 'react-pure-render/mixin';
 
 /**
  * Internal dependencies
  */
-var FoldableCard = require( 'components/foldable-card' );
+import FoldableCard from 'components/foldable-card';
+import Button from 'components/button';
 
-module.exports = React.createClass( {
+export default React.createClass( {
 	displayName: 'FoldableCard',
 
-	mixins: [ React.addons.PureRenderMixin ],
+	mixins: [ PureRenderMixin ],
 
 	render: function() {
 		return (
@@ -37,6 +39,14 @@ module.exports = React.createClass( {
 				</p>
 				<p>
 					<FoldableCard
+						header="This is a foldable card with a custom action icon"
+						icon="arrow-down"
+						>
+						These are its contents
+					</FoldableCard>
+				</p>
+				<p>
+					<FoldableCard
 						header="This is a compact box with summary"
 						summary="Unexpanded Summary"
 						expandedSummary="Expanded Summary"
@@ -49,6 +59,14 @@ module.exports = React.createClass( {
 						header={ <div><div>This is a multiline foldable card</div><div><small> with a summary component & a expanded summary component</small></div></div> }
 						summary={ <button className="button">Update</button> }
 						expandedSummary={ <button className="button">Update</button> }>
+						Nothing to see here. Keep walking!
+					</FoldableCard>
+				</p>
+				<p>
+					<FoldableCard
+						header={ <div><div>This is a multiline foldable card</div><div><small> with a summary component & a expanded summary component</small></div></div> }
+						summary={ <Button compact scary>Update</Button> }
+						expandedSummary={ <Button compact scary>Update</Button> }>
 						Nothing to see here. Keep walking!
 					</FoldableCard>
 				</p>

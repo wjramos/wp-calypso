@@ -1,5 +1,12 @@
+/**
+ * External dependencies
+ */
+import { current } from 'page';
+
+/**
+* Internal dependencies
+*/
 import stepActions from 'lib/signup/step-actions';
-import { abtest } from 'lib/abtest';
 import i18n from 'lib/mixins/i18n';
 
 module.exports = {
@@ -9,13 +16,18 @@ module.exports = {
 		dependencies: [ 'siteSlug' ]
 	},
 
-	'theme-headstart': {
-		stepName: 'theme-headstart',
+	'themes-headstart': {
+		stepName: 'themes-headstart',
 		props: {
-			useHeadstart: true
+			useHeadstart: true,
 		},
 		dependencies: [ 'siteSlug' ],
-		providesDependencies: [ 'theme', 'images' ]
+		providesDependencies: [ 'theme' ]
+	},
+
+	'design-type': {
+		stepName: 'design-type',
+		providesDependencies: [ 'themes' ]
 	},
 
 	site: {
@@ -35,28 +47,10 @@ module.exports = {
 		stepName: 'test',
 	},
 
-	'survey-user': {
-		stepName: 'survey-user',
-		apiRequestFunction: stepActions.createAccount,
-		dependencies: [ 'surveySiteType', 'surveyQuestion' ],
-		providesToken: true,
-		providesDependencies: [ 'bearer_token', 'username' ]
-	},
-
-	'survey-blog': {
-		stepName: 'survey-blog',
+	survey: {
+		stepName: 'survey',
 		props: {
-			surveySiteType: 'blog',
-			isOneStep: abtest( 'verticalSurvey' ) === 'oneStep'
-		},
-		providesDependencies: [ 'surveySiteType', 'surveyQuestion' ]
-	},
-
-	'survey-site': {
-		stepName: 'survey-site',
-		props: {
-			surveySiteType: 'site',
-			isOneStep: abtest( 'verticalSurvey' ) === 'oneStep'
+			surveySiteType: ( current && current.toString().match( /\/start\/blog/ ) ) ? 'blog' : 'site'
 		},
 		providesDependencies: [ 'surveySiteType', 'surveyQuestion' ]
 	},
@@ -68,29 +62,26 @@ module.exports = {
 		providesDependencies: [ 'cartItem' ]
 	},
 
+	'select-plan': {
+		stepName: 'select-plan',
+		apiRequestFunction: stepActions.addPlanToCart,
+		dependencies: [ 'siteSlug' ],
+		providesDependencies: [ 'cartItem' ]
+	},
+
 	domains: {
 		stepName: 'domains',
 		apiRequestFunction: stepActions.addDomainItemsToCart,
-		providesDependencies: [ 'siteSlug', 'domainItem' ],
+		providesDependencies: [ 'siteSlug', 'domainItem', 'themeItem' ],
 		delayApiRequestUntilComplete: true
 	},
 
 	'domains-with-theme': {
 		stepName: 'domains-with-theme',
 		apiRequestFunction: stepActions.addDomainItemsToCart,
-		providesDependencies: [ 'siteSlug', 'domainItem' ],
-		dependencies: [ 'theme', 'images' ],
+		providesDependencies: [ 'siteSlug', 'domainItem', 'themeItem' ],
+		dependencies: [ 'theme' ],
 		delayApiRequestUntilComplete: true
-	},
-
-	'theme-dss': {
-		stepName: 'theme-dss',
-		props: {
-			useHeadstart: true,
-			themes: [ 'Sela', 'Goran', 'Twenty Fifteen', 'Sequential', 'Colinear', 'Edin' ]
-		},
-		dependencies: [ 'siteSlug' ],
-		providesDependencies: [ 'theme', 'images' ]
 	},
 
 	'jetpack-user': {

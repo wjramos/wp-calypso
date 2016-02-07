@@ -340,7 +340,7 @@
 
 #habla_window_div.habla_window_div_base {
 	display:block!important;
-	z-index:99999999;
+	z-index: z-index( 'root', '#habla_window_div.habla_window_div_base' );
 }
 
 #habla_window_div #olark-callout-bubble,
@@ -832,11 +832,15 @@
 	color:$gray-dark!important;
 }
 
+#habla_conversation_div .habla_conversation_notification_nickname {
+	display: none;
+}
+
 #habla_conversation_div .habla_conversation_notification {
-	float: left;
 	color: $gray;
 	font-style: italic;
 	margin: 1em 0;
+	display: block;
 }
 
 @-webkit-keyframes pulse {
@@ -1004,5 +1008,5 @@ div.hbl_pal_main_width {
 }
 
 .olrk-state-compressed div.hbl_pal_main_width {
-    width: 28px !important;
+	width: 28px !important;
 }
