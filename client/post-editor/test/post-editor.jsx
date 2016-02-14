@@ -9,7 +9,8 @@ const chai = require( 'chai' ),
 	TestUtils = require( 'react-addons-test-utils' ),
 	sinon = require( 'sinon' ),
 	sinonChai = require( 'sinon-chai' ),
-	mockery = require( 'mockery' );
+	mockery = require( 'mockery' ),
+	noop = require( 'lodash/utility/noop' );
 
 /**
  * Internal dependencies
@@ -38,6 +39,9 @@ mockery.enable( {
 } );
 mockery.registerSubstitute( 'matches-selector', 'component-matches-selector' );
 mockery.registerSubstitute( 'query', 'component-query' );
+mockery.registerMock( 'component-classes', function() {
+	return { add: noop, toggle: noop, remove: noop }
+} );
 mockery.registerMock( 'components/tinymce', MOCK_COMPONENT );
 mockery.registerMock( 'components/popover', MOCK_COMPONENT );
 mockery.registerMock( 'components/forms/clipboard-button', MOCK_COMPONENT );
@@ -55,6 +59,10 @@ mockery.registerMock( 'post-editor/drafts-button', MOCK_COMPONENT );
 mockery.registerMock( 'my-sites/drafts/draft-list', MOCK_COMPONENT );
 mockery.registerMock( 'lib/layout-focus', {
 	set() {}
+} );
+// TODO: REDUX - add proper tests when whole post-editor is reduxified
+mockery.registerMock( 'react-redux', {
+	connect: () => component => component
 } );
 
 const PostEditor = require( '../post-editor' );

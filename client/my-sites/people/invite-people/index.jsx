@@ -2,16 +2,16 @@
  * External dependencies
  */
 import React from 'react';
-import LinkedStateMixin from 'react-addons-linked-state-mixin';
 import page from 'page';
 import get from 'lodash/object/get';
+import debugModule from 'debug';
+import contains from 'lodash/collection/contains';
 
 /**
  * Internal dependencies
  */
 import RoleSelect from 'my-sites/people/role-select';
 import TokenField from 'components/token-field';
-import FormTextArea from 'components/forms/form-textarea';
 import FormButton from 'components/forms/form-button';
 import FormFieldset from 'components/forms/form-fieldset';
 import FormLabel from 'components/forms/form-label';
@@ -20,11 +20,25 @@ import { sendInvites } from 'lib/invites/actions';
 import Card from 'components/card';
 import Main from 'components/main';
 import HeaderCake from 'components/header-cake';
+import CountedTextarea from 'components/forms/counted-textarea';
+import { createInviteValidation } from 'lib/invites/actions';
+import InvitesCreateValidationStore from 'lib/invites/stores/invites-create-validation';
+
+/**
+ * Module variables
+ */
+const debug = debugModule( 'calypso:my-sites:people:invite' );
 
 export default React.createClass( {
 	displayName: 'InvitePeople',
 
-	mixins: [ LinkedStateMixin ],
+	componentDidMount() {
+		InvitesCreateValidationStore.on( 'change', this.refreshValidation );
+	},
+
+	componentWillUnmount() {
+		InvitesCreateValidationStore.off( 'change', this.refreshValidation );
+	},
 
 	componentWillReceiveProps() {
 		this.setState( this.resetState() );
@@ -37,22 +51,87 @@ export default React.createClass( {
 	resetState() {
 		return ( {
 			usernamesOrEmails: [],
-			role: '',
+			role: 'follower',
 			message: '',
 			response: false,
-			sendingInvites: false
+			sendingInvites: false,
+			getTokenStatus: () => {}
 		} );
 	},
 
 	onTokensChange( tokens ) {
-		this.setState( { usernamesOrEmails: tokens } );
+		const { role } = this.state;
+		const filteredTokens = tokens.map( ( value ) => {
+			if ( 'object' === typeof value ) {
+				return value.value;
+			}
+			return value;
+		} );
+
+		this.setState( { usernamesOrEmails: filteredTokens } );
+		createInviteValidation( this.props.site.ID, filteredTokens, role );
+	},
+
+	onMessageChange( event ) {
+		this.setState( { message: event.target.value } );
+	},
+
+	onRoleChange( event ) {
+		const role = event.target.value;
+		this.setState( { role } );
+		createInviteValidation( this.props.site.ID, this.state.usernamesOrEmails, role );
+	},
+
+	refreshValidation() {
+		const errors = InvitesCreateValidationStore.getErrors( this.props.site.ID, this.state.role ) || [];
+		let success = InvitesCreateValidationStore.getSuccess( this.props.site.ID, this.state.role ) || [];
+		if ( ! success.indexOf ) {
+			success = Object.keys( success ).map( key => success[ key ] );
+		}
+
+		this.setState( {
+			errors,
+			success
+		} );
+	},
+
+	getTokensWithStatus() {
+		const { success, errors } = this.state;
+
+		const tokens = this.state.usernamesOrEmails.map( ( value ) => {
+			let status;
+			if ( errors && errors[ value ] ) {
+				status = 'error';
+			} else if ( ! contains( success, value ) ) {
+				status = 'validating';
+			}
+
+			if ( status ) {
+				value = {
+					value,
+					status
+				};
+			}
+
+			return value;
+		} );
+
+		debug( 'Generated tokens: ' + JSON.stringify( tokens ) );
+		return tokens;
 	},
 
 	submitForm( event ) {
 		event.preventDefault();
+		debug( 'Submitting invite form. State: ' + JSON.stringify( this.state ) );
 
 		this.setState( { sendingInvites: true } );
 		sendInvites( this.props.site.ID, this.state.usernamesOrEmails, this.state.role, this.state.message, ( error, data ) => {
+			if ( error ) {
+				debug( 'Send invite error:' + JSON.stringify( error ) );
+			} else {
+				debug( 'Send invites response: ' + JSON.stringify( data ) );
+			}
+
 			this.setState( {
 				sendingInvites: false,
 				response: error ? error : data
@@ -76,19 +155,6 @@ export default React.createClass( {
 		);
 	},
 
-	renderResponse() {
-		return (
-			<Card>
-				<label>Response:</label><br />
-				<code>
-					<pre>
-						{ JSON.stringify( this.state.response ) }
-					</pre>
-				</code>
-			</Card>
-		);
-	},
-
 	render() {
 		return (
 			<Main>
@@ -98,7 +164,8 @@ export default React.createClass( {
 						<FormFieldset>
 							<FormLabel>{ this.translate( 'Usernames or Emails' ) }</FormLabel>
 							<TokenField
-								value={ this.state.usernamesOrEmails }
+								isBorderless
+								value={ this.getTokensWithStatus() }
 								onChange={ this.onTokensChange } />
 							<FormSettingExplanation>
 								{ this.translate(
@@ -112,17 +179,24 @@ export default React.createClass( {
 							id="role"
 							name="role"
 							key="role"
+							includeFollower
 							siteId={ this.props.site.ID }
-							valueLink={ this.linkState( 'role' ) }
+							onChange={ this.onRoleChange }
+							value={ this.state.role }
 							disabled={ this.state.sendingInvites }
-							explanation={ this.renderRoleExplanation() }/>
+							explanation={ this.renderRoleExplanation() }
+							/>
 
 						<FormFieldset>
 							<FormLabel htmlFor="message">{ this.translate( 'Custom Message' ) }</FormLabel>
-							<FormTextArea
+							<CountedTextarea
 								name="message"
 								id="message"
-								valueLink={ this.linkState( 'message' ) }
+								showRemainingCharacters
+								maxLength={ 500 }
+								acceptableLength={ 500 }
+								onChange={ this.onMessageChange }
+								value={ this.state.message }
 								disabled={ this.state.sendingInvites } />
 							<FormSettingExplanation>
 								{ this.translate(
@@ -142,7 +216,6 @@ export default React.createClass( {
 						</FormButton>
 					</form>
 				</Card>
-				{ this.state.response && this.renderResponse() }
 			</Main>
 		);
 	}

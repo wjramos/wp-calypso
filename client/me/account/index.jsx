@@ -40,9 +40,9 @@ import NoticeAction from 'components/notice/notice-action';
 import observe from 'lib/mixins/data-observe';
 import eventRecorder from 'me/event-recorder';
 import Main from 'components/main';
-import SectionHeader from 'components/section-header';
 import SitesDropdown from 'components/sites-dropdown';
 import { successNotice, errorNotice } from 'state/notices/actions';
+import { getLanguage } from 'lib/i18n-utils';
 
 import _sites from 'lib/sites-list';
 import _user from 'lib/user';
@@ -138,11 +138,32 @@ const Account = React.createClass( {
 		}
 	},
 
-	getOptoutText( website ) {
-		return this.translate( '%(website)s opt-out', {
-			args: { website: website },
-			context: 'A website address, formatted to look like "Website.com"'
-		} );
+	thankTranslationContributors() {
+		let locale = this.props.userSettings.getSetting( 'language' );
+		if ( ! locale || locale === 'en' ) {
+			return;
+		}
+
+		const language = getLanguage( locale );
+		if ( ! language ) {
+			return;
+		}
+
+		// Config names are like 'fr - Francais', so strip the slug off
+		const languageName = language.name.replace( /^[a-zA-Z-]* - /, '' );
+		const url = 'https://en.support.wordpress.com/translators/?contributor_locale=' + locale;
+
+		return ( <FormSettingExplanation> {
+			this.translate( 'Thanks to {{a}}all our community members who helped translate to {{language/}}{{/a}}!', {
+				components: {
+					a: <a
+							target="_blank"
+							href={ url }
+					/>,
+					language: <span>{ languageName }</span>
+				}
+			} ) }
+		</FormSettingExplanation> );
 	},
 
 	cancelEmailChange() {
@@ -457,6 +478,7 @@ const Account = React.createClass( {
 						onFocus={ this.recordFocusEvent( 'Interface Language Field' ) }
 						valueKey="langSlug"
 						valueLink={ this.updateLanguage() } />
+					{ this.thankTranslationContributors() }
 				</FormFieldset>
 
 				{ this.communityTranslator() }
@@ -619,15 +641,6 @@ const Account = React.createClass( {
 							{ renderUsernameForm ? this.renderUsernameFields() : this.renderAccountFields() }
 						</ReactCSSTransitionGroup>
 					</form>
-				</Card>
-				<SectionHeader label={ this.translate( 'Privacy' ) } />
-				<Card>
-					<p>{ this.translate( "We use some third party tools to collect data about how users interact with our site. You can find more information about how we use these tools in our privacy policy. If you'd prefer that we not track your interactions you may opt out by using the following link: " ) }</p>
-					<p>
-						<a href="https://www.inspectlet.com/optout" target="_blank" onClick={ this.recordClickEvent( 'Inspectlet Opt-out Link' ) }>
-							{ this.getOptoutText( 'Inspectlet.com' ) }
-						</a>
-					</p>
 				</Card>
 			</Main>
 		);

@@ -3,15 +3,15 @@
  */
 var take = require( 'lodash/array/take' ),
 	clone = require( 'lodash/lang/clone' ),
-	contains = require( 'lodash/collection/contains' ),
 	map = require( 'lodash/collection/map' ),
 	React = require( 'react' ),
 	PureRenderMixin = require( 'react-pure-render/mixin' ),
-	without = require( 'lodash/array/without' ),
 	each = require( 'lodash/collection/each' ),
 	identity = require( 'lodash/utility/identity' ),
 	classNames = require( 'classnames' ),
-	debug = require( 'debug' )( 'calypso:token-field' );
+	debug = require( 'debug' )( 'calypso:token-field' ),
+	some = require( 'lodash/collection/some' ),
+	forEach = require( 'lodash/collection/forEach' );
 
 /**
  * Internal dependencies
@@ -24,10 +24,27 @@ var TokenField = React.createClass( {
 	propTypes: {
 		suggestions: React.PropTypes.array,
 		maxSuggestions: React.PropTypes.number,
-		value: React.PropTypes.array,
 		displayTransform: React.PropTypes.func,
 		saveTransform: React.PropTypes.func,
-		onChange: React.PropTypes.func
+		onChange: React.PropTypes.func,
+		tokenStatus: React.PropTypes.func,
+		isBorderless: React.PropTypes.bool,
+		value: function( props ) {
+			const value = props.value;
+			if ( ! Array.isArray( value ) ) {
+				return new Error( 'Value prop is expected to be an array.' );
+			}
+
+			forEach( value, ( item ) => {
+				if ( 'object' === typeof item ) {
+					if ( ! 'value' in item ) {
+						return new Error(
+							"When using object for value prop, each object is expected to have a 'value' property."
+						);
+					}
+				}
+			} );
+		}
 	},
 
 	getDefaultProps: function() {
@@ -39,7 +56,9 @@ var TokenField = React.createClass( {
 			saveTransform: function( token ) {
 				return token.trim();
 			},
-			onChange: function() {}
+			onChange: function() {},
+			tokenStatus: function() {},
+			isBorderless: false
 		};
 	},
 
@@ -111,12 +130,17 @@ var TokenField = React.createClass( {
 	},
 
 	_renderToken: function( token ) {
+		const value = this._getTokenValue( token );
+		const status = token.status ? token.status : undefined;
+
 		return (
 			<Token
-				key={ 'token-' + token }
-				value={ token }
+				key={ 'token-' + value }
+				value={ value }
+				status={ status }
 				displayTransform={ this.props.displayTransform }
 				onClickRemove={ this._onTokenClickRemove }
+				isBorderless={ this.props.isBorderless }
 			/>
 		);
 	},
@@ -425,7 +449,10 @@ var TokenField = React.createClass( {
 	},
 
 	_deleteToken: function( token ) {
-		this.props.onChange( without( this.props.value, token ) );
+		const newTokens = this.props.value.filter( ( item ) => {
+			return this._getTokenValue( item ) !== this._getTokenValue( token );
+		} );
+		this.props.onChange( newTokens );
 	},
 
 	_moveInputToIndex: function( index ) {
@@ -451,7 +478,7 @@ var TokenField = React.createClass( {
 
 		token = this.props.saveTransform( token );
 
-		if ( ! contains( this.props.value, token ) ) {
+		if ( ! this._valueContainsToken( token ) ) {
 			newValue = clone( this.props.value );
 			newValue.splice( this._getIndexOfInput(), 0, token );
 
@@ -468,6 +495,20 @@ var TokenField = React.createClass( {
 			debug( '_addNewToken focusing input' );
 			this.refs.input.focus();
 		}
+	},
+
+	_valueContainsToken( token ) {
+		return some( this.props.value, ( item ) => {
+			return this._getTokenValue( token ) === this._getTokenValue( item );
+		} );
+	},
+
+	_getTokenValue( token ) {
+		if ( 'object' === typeof token ) {
+			return token.value;
+		}
+
+		return token;
 	},
 
 	_getIndexOfInput: function() {

@@ -3,13 +3,17 @@
  */
 import notices from 'notices';
 import i18n from 'lib/mixins/i18n';
+import wpcom from 'lib/wp';
 
 import {
+	EXPORT_ADVANCED_SETTINGS_FETCH,
+	EXPORT_ADVANCED_SETTINGS_FETCH_FAIL,
+	EXPORT_ADVANCED_SETTINGS_RECEIVE,
+	EXPORT_COMPLETE,
+	EXPORT_FAILURE,
+	EXPORT_START_REQUEST,
+	EXPORT_STARTED,
 	SET_EXPORT_POST_TYPE,
-	REQUEST_START_EXPORT,
-	REPLY_START_EXPORT,
-	FAIL_EXPORT,
-	COMPLETE_EXPORT
 } from 'state/action-types';
 
 /**
@@ -26,50 +30,99 @@ export function setPostType( postType ) {
 }
 
 /**
- * Sends a request to the server to start an export.
- *
- * @return {Function}         Action thunk
+ * Fetches the available advanced settings for customizing export content
+ * @param {Number} siteId The ID of the site to fetch
+ * @return {thunk}        An action thunk for fetching the advanced settings
  */
-export function startExport() {
-	return ( dispatch ) => {
+export function advancedSettingsFetch( siteId ) {
+	return ( dispatch, getState ) => {
+		if ( siteId === null || typeof siteId === 'undefined' ) {
+			return;
+		}
+
+		if ( getState().siteSettings.exporter.fetchingAdvancedSettings[ siteId ] === true ) {
+			return;
+		}
+
 		dispatch( {
-			type: REQUEST_START_EXPORT
+			type: EXPORT_ADVANCED_SETTINGS_FETCH,
+			siteId
 		} );
 
-		// This will be replaced with an API call to start the export
-		setTimeout( () => {
-			dispatch( replyStartExport() );
+		const updateExportSettings =
+			settings => dispatch( advancedSettingsReceive( siteId, settings ) );
 
-			// This will be replaced with polling to check when the export completes
-			setTimeout( () => {
-				dispatch( completeExport( '#', 'testing-2015-01-01.xml' ) );
-				//dispatch( failExport( 'The reason for failure would be displayed here' ) );
-			}, 1400 );
-		}, 400 );
+		const fetchFail =
+			error => dispatch( advancedSettingsFail( siteId, error ) );
+
+		return wpcom.undocumented()
+			.getExportSettings( siteId )
+			.then( updateExportSettings )
+			.catch( fetchFail );
 	}
 }
 
-export function replyStartExport() {
+export function advancedSettingsReceive( siteId, advancedSettings ) {
 	return {
-		type: REPLY_START_EXPORT
-	}
+		type: EXPORT_ADVANCED_SETTINGS_RECEIVE,
+		siteId,
+		advancedSettings
+	};
 }
 
-export function failExport( failureReason ) {
-	notices.error(
-		failureReason,
-		{
-			button: i18n.translate( 'Get Help' ),
-			href: 'https://support.wordpress.com/'
+export function advancedSettingsFail( siteId, error ) {
+	return {
+		type: EXPORT_ADVANCED_SETTINGS_FETCH_FAIL,
+		siteId,
+		error
+	};
+}
+
+/**
+ * Sends a request to the server to start an export.
+ * @param  {Number}   siteId  The ID of the site to export
+ * @return {Function}         Action thunk
+ */
+export function startExport( siteId ) {
+	return ( dispatch ) => {
+		if ( ! siteId ) {
+			return;
 		}
-	);
 
-	return {
-		type: FAIL_EXPORT
+		dispatch( {
+			type: EXPORT_START_REQUEST,
+			siteId: siteId
+		} );
+
+		const success =
+			() => dispatch( exportStarted( siteId ) );
+
+		const failure =
+			error => dispatch( exportFailed( siteId, error ) );
+
+		return wpcom.undocumented()
+			.startExport( siteId )
+			.then( success )
+			.catch( failure );
 	}
 }
 
-export function completeExport( downloadURL ) {
+export function exportStarted( siteId ) {
+	return {
+		type: EXPORT_STARTED,
+		siteId
+	};
+}
+
+export function exportFailed( siteId, error ) {
+	return {
+		type: EXPORT_FAILURE,
+		siteId,
+		error
+	}
+}
+
+export function exportComplete( siteId, downloadURL ) {
 	notices.success(
 		i18n.translate( 'Your export was successful! A download link has also been sent to your email.' ),
 		{
@@ -79,6 +132,8 @@ export function completeExport( downloadURL ) {
 	);
 
 	return {
-		type: COMPLETE_EXPORT
+		type: EXPORT_COMPLETE,
+		siteId,
+		downloadURL
 	}
 }

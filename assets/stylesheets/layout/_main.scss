@@ -291,10 +291,10 @@ $sidebar-width-min: 228px;
 @include breakpoint( "<660px" ) {
 	.wp-content {
 		margin-left: 0;
-		padding: 8px;
+		padding: 0;
 
 		.has-no-sidebar & {
-			padding-left: 8px;
+			padding-left: 0;
 		}
 	}
 }
@@ -355,7 +355,7 @@ $sidebar-width-min: 228px;
 		left: -272px;
 	width: 272px;
 	overflow: hidden;
-	z-index: 10;
+	z-index: z-index( 'root', '.wp-secondary .site-selector' );
 	opacity: 0;
 	pointer-events: none;
 
@@ -540,4 +540,9 @@ body.newdash div.wordpress-com-extension-promo {
 	.environment-badge {
 		display: none;
 	}
+}
+
+//added to the html element when we don't want the background content to scroll
+html.no-scroll {
+	overflow: hidden;
 }

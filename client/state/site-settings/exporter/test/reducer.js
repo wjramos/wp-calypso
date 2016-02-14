@@ -6,35 +6,153 @@ import { expect } from 'chai';
 /**
  * Internal dependencies
  */
-import { DESERIALIZE, SERIALIZE } from 'state/action-types';
+import {
+	EXPORT_ADVANCED_SETTINGS_FAIL,
+	EXPORT_ADVANCED_SETTINGS_FETCH,
+	EXPORT_ADVANCED_SETTINGS_RECEIVE,
+	DESERIALIZE,
+	SERIALIZE
+} from 'state/action-types';
 import {
 	selectedPostType,
-	exportingState
+	exportingState,
+	advancedSettings,
+	fetchingAdvancedSettings
 } from '../reducers';
+import {
+	SAMPLE_ADVANCED_SETTINGS,
+	SAMPLE_ADVANCED_SETTINGS_EMPTY,
+} from './sample-data';
 import { States } from '../constants';
 
 describe( 'reducer', () => {
 	describe( 'selectedPostType', () => {
-		it( 'persists state', () => {
+		it( 'does not persist state', () => {
 			const postType = 'feedback';
 			const state = selectedPostType( postType, { type: SERIALIZE } );
-			expect( state ).to.eql( 'feedback' );
+			expect( state ).to.be.null;
 		} );
-		it( 'loads persisted state', () => {
+		it( 'does not load persisted state', () => {
 			const postType = 'feedback';
 			const state = selectedPostType( postType, { type: DESERIALIZE } );
-			expect( state ).to.eql( 'feedback' );
+			expect( state ).to.be.null;
 		} );
 	} );
 
 	describe( 'exportingState', () => {
-		it( 'persists state', () => {
-			const state = exportingState( States.EXPORTING, { type: SERIALIZE } );
-			expect( state ).to.eql( States.EXPORTING );
+		it( 'does not persist state', () => {
+			const state = exportingState( { 100658273: States.EXPORTING }, { type: SERIALIZE } );
+			expect( state ).to.eql( {} );
 		} );
-		it( 'ignores persisted state since server side checking is not implemented yet', () => {
-			const state = exportingState( States.EXPORTING, { type: DESERIALIZE } );
-			expect( state ).to.eql( States.READY );
+		it( 'does not load persisted state', () => {
+			const state = exportingState( { 100658273: States.EXPORTING }, { type: DESERIALIZE } );
+			expect( state ).to.eql( {} );
+		} );
+	} );
+
+	describe( '#fetchingAdvancedSettings()', () => {
+		it( 'should not persist state', () => {
+			const state = fetchingAdvancedSettings( { 100658273: true }, { type: SERIALIZE } );
+			expect( state ).to.eql( {} );
+		} );
+
+		it( 'should not load persisted state', () => {
+			const state = fetchingAdvancedSettings( { 100658273: true }, { type: DESERIALIZE } );
+			expect( state ).to.eql( {} );
+		} );
+
+		it( 'should index fetching status by site ID', () => {
+			const state = fetchingAdvancedSettings( null, {
+				type: EXPORT_ADVANCED_SETTINGS_FETCH,
+				siteId: 100658273
+			} );
+			expect( state ).to.eql( { 100658273: true } );
+		} );
+
+		it( 'should reset fetching status after receive', () => {
+			const state = fetchingAdvancedSettings( null, {
+				type: EXPORT_ADVANCED_SETTINGS_RECEIVE,
+				siteId: 100658273,
+				advancedSettings: {}
+			} );
+			expect( state ).to.eql( { 100658273: false } );
+		} );
+
+		it( 'should reset fetching status after fail', () => {
+			const state = fetchingAdvancedSettings( null, {
+				type: EXPORT_ADVANCED_SETTINGS_FAIL,
+				siteId: 100658273,
+				advancedSettings: {}
+			} );
+			expect( state ).to.eql( { 100658273: false } );
+		} );
+
+		it( 'should not replace fetching status with other site', () => {
+			const state = fetchingAdvancedSettings( {
+				100658273: true
+			}, {
+				type: EXPORT_ADVANCED_SETTINGS_FETCH,
+				siteId: 12345
+			} );
+			expect( state ).to.eql( {
+				100658273: true,
+				12345: true
+			} );
+		} );
+	} );
+
+	describe( '#advancedSettings()', () => {
+		it( 'should persist state', () => {
+			const settings = { 100658273: SAMPLE_ADVANCED_SETTINGS };
+			const state = advancedSettings( settings, { type: SERIALIZE } );
+			expect( state ).to.eql( settings );
+		} );
+
+		it( 'should load persisted state', () => {
+			const settings = { 100658273: SAMPLE_ADVANCED_SETTINGS };
+			const state = advancedSettings( settings, { type: DESERIALIZE } );
+			expect( state ).to.eql( settings );
+		} );
+
+		it( 'should index settings by site ID', () => {
+			const state = advancedSettings( null, {
+				type: EXPORT_ADVANCED_SETTINGS_RECEIVE,
+				siteId: 100658273,
+				advancedSettings: SAMPLE_ADVANCED_SETTINGS
+			} );
+
+			expect( state ).to.eql( {
+				100658273: SAMPLE_ADVANCED_SETTINGS
+			} );
+		} );
+
+		it( 'should replace known settings for site', () => {
+			let state = { 100658273: SAMPLE_ADVANCED_SETTINGS };
+
+			state = advancedSettings( state, {
+				type: EXPORT_ADVANCED_SETTINGS_RECEIVE,
+				siteId: 100658273,
+				advancedSettings: SAMPLE_ADVANCED_SETTINGS_EMPTY
+			} );
+
+			expect( state ).to.eql( {
+				100658273: SAMPLE_ADVANCED_SETTINGS_EMPTY
+			} );
+		} );
+
+		it( 'should not replace known settings with other sites', () => {
+			let state = { 100658273: SAMPLE_ADVANCED_SETTINGS };
+
+			state = advancedSettings( state, {
+				type: EXPORT_ADVANCED_SETTINGS_RECEIVE,
+				siteId: 12345,
+				advancedSettings: SAMPLE_ADVANCED_SETTINGS_EMPTY
+			} );
+
+			expect( state ).to.eql( {
+				100658273: SAMPLE_ADVANCED_SETTINGS,
+				12345: SAMPLE_ADVANCED_SETTINGS_EMPTY
+			} );
 		} );
 	} );
 } );

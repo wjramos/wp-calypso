@@ -16,21 +16,35 @@ export default React.createClass( {
 	propTypes: {
 		startExport: PropTypes.func.isRequired,
 		setPostType: PropTypes.func.isRequired,
+		advancedSettingsFetch: PropTypes.func.isRequired,
 
 		shouldShowProgress: PropTypes.bool.isRequired,
-		postType: PropTypes.string
+		postType: PropTypes.string,
+		siteId: PropTypes.number
+	},
+
+	componentWillMount() {
+		this.props.advancedSettingsFetch( this.props.siteId );
+	},
+
+	componentWillReceiveProps( newProps ) {
+		if ( newProps.siteId !== this.props.siteId ) {
+			this.props.advancedSettingsFetch( newProps.siteId );
+		}
 	},
 
 	render: function() {
 		const { setPostType, startExport } = this.props;
 		const { postType, shouldShowProgress } = this.props;
+		const siteId = this.props.site.ID;
+		const exportAll = () => startExport( siteId );
 
 		const exportButton = (
 			<SpinnerButton
 				className="exporter__export-button"
 				loading={ shouldShowProgress }
 				isPrimary={ true }
-				onClick={ startExport }
+				onClick={ exportAll }
 				text={ this.translate( 'Export All' ) }
 				loadingText={ this.translate( 'Exporting…' ) } />
 		);

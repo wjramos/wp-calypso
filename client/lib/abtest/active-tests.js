@@ -46,10 +46,13 @@ module.exports = {
 		defaultVariation: 'yearly'
 	},
 	plansUpgradeButton: {
-		datestamp: '20160129',
+		datestamp: '20160212', // Update to the day of deploy
 		variations: {
-			original: 50,
-			button: 50
+			original: 20,
+			free: 20,
+			add: 20,
+			info: 20,
+			change: 20
 		},
 		defaultVariation: 'original'
 	},
@@ -61,22 +64,6 @@ module.exports = {
 			noTeaser: 34
 		},
 		defaultVariation: 'mostPopular'
-	},
-	checkoutMasterbar: {
-		datestamp: '20160126',
-		variations: {
-			original: 50,
-			minimal: 50
-		},
-		defaultVariation: 'original'
-	},
-	periodLabelFree: {
-		datestamp: '20160202',
-		variations: {
-			forLife: 50,
-			withAdv: 50
-		},
-		defaultVariation: 'forLife'
 	},
 	plansFeatureList: {
 		datestamp: '20040202',

@@ -17,7 +17,7 @@ var config = require( 'config' ),
 	PublishMenu = require( './publish-menu' ),
 	SiteStatsStickyLink = require( 'components/site-stats-sticky-link' ),
 	productsValues = require( 'lib/products-values' ),
-	getCustomizeUrl = require( 'lib/themes/helpers' ).getCustomizeUrl,
+	getCustomizeUrl = require( '../themes/helpers' ).getCustomizeUrl,
 	AdsUtils = require( 'lib/ads/utils' ),
 	Gridicon = require( 'components/gridicon' ),
 	Sidebar = require( 'layout/sidebar' ),
@@ -332,9 +332,26 @@ module.exports = React.createClass( {
 		let planName = site.plan.product_name_short,
 			labelClass = 'plan-name';
 
-		if ( abtest( 'plansUpgradeButton' ) === 'button' && productsValues.isFreePlan( site.plan ) ) {
+		const testVariation = abtest( 'plansUpgradeButton' );
+
+		if ( testVariation !== 'original' && productsValues.isFreePlan( site.plan ) ) {
 			labelClass = 'add-new';
-			planName = 'More'; // TODO: translate this string if the test is removed
+
+			if ( testVariation === 'free' ) {
+				planName = 'Free'; // TODO: translate this string if the test is removed
+			}
+
+			if ( testVariation === 'add' ) {
+				planName = 'Add'; // TODO: translate this string if the test is removed
+			}
+
+			if ( testVariation === 'info' ) {
+				planName = 'Info'; // TODO: translate this string if the test is removed
+			}
+
+			if ( testVariation === 'change' ) {
+				planName = 'Change'; // TODO: translate this string if the test is removed
+			}
 		}
 
 		if ( productsValues.isFreeTrial( site.plan ) ) {

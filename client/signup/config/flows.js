@@ -2,7 +2,7 @@
  * External dependencies
  */
 var assign = require( 'lodash/object/assign' ),
-	page = require( 'page' ),
+	includes = require( 'lodash/collection/includes' ),
 	reject = require( 'lodash/collection/reject' );
 
 /**
@@ -181,16 +181,16 @@ function removeUserStepFromFlow( flow ) {
 	} );
 }
 
-function getCurrentFlowName( currentUrl ) {
-	// Headstart test - Only consider users from the homepage
-	if ( '/start/en?ref=homepage' === currentUrl && 'headstart' === abtest( 'headstart' ) ) {
+function filterFlowName( flowName ) {
+	const headstartFlows = [ 'blog', 'website' ];
+	if ( includes( headstartFlows, flowName ) && 'headstart' === abtest( 'headstart' ) ) {
 		return 'headstart';
 	}
-	return 'main';
+	return flowName;
 }
 
 module.exports = {
-	currentFlowName: getCurrentFlowName( page.current ),
+	filterFlowName: filterFlowName,
 
 	defaultFlowName: 'main',
 

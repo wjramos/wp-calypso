@@ -23,7 +23,7 @@ var Main = require( 'components/main' ),
 	JetpackUpgradeMessage = require( './jetpack-upgrade-message' ),
 	JetpackManageDisabledMessage = require( './jetpack-manage-disabled-message' ),
 	ThemesSelection = require( './themes-selection' ),
-	ThemeHelpers = require( 'lib/themes/helpers' ),
+	ThemeHelpers = require( './helpers' ),
 	actionLabels = require( './action-labels' ),
 	ThemesListSelectors = require( 'state/themes/themes-list/selectors' ),
 	getSelectedSite = require( 'state/ui/selectors' ).getSelectedSite;
@@ -31,10 +31,16 @@ var Main = require( 'components/main' ),
 var ThemesSingleSite = React.createClass( {
 	propTypes: {
 		siteId: React.PropTypes.string,
+		tier: React.PropTypes.string,
+		search: React.PropTypes.string,
+		trackScrollPage: React.PropTypes.func,
+		// Connected Props
+		queryParams: React.PropTypes.object,
+		themesList: React.PropTypes.array,
 		selectedSite: React.PropTypes.oneOfType( [
 			React.PropTypes.object,
 			React.PropTypes.bool
-		] ).isRequired
+		] ).isRequired,
 	},
 
 	getInitialState: function() {
@@ -70,7 +76,7 @@ var ThemesSingleSite = React.createClass( {
 					action: theme => dispatch( Action.activate( theme, site, 'showcase' ) ),
 					hideForTheme: theme => theme.active || ( theme.price && ! theme.purchased )
 				},
-				customize: site.isCustomizable()
+				customize: site && site.isCustomizable()
 					? {
 						action: theme => dispatch( Action.customize( theme, site ) ),
 						hideForTheme: theme => ! theme.active
@@ -184,7 +190,7 @@ export default connect(
 		{
 			queryParams: ThemesListSelectors.getQueryParams( state ),
 			themesList: ThemesListSelectors.getThemesList( state ),
-			selectedSite: getSelectedSite( state )
+			selectedSite: getSelectedSite( state ) || false,
 		}
 	)
 )( ThemesSingleSite );

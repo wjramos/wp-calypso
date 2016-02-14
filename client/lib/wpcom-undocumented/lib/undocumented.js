@@ -304,6 +304,14 @@ Undocumented.prototype.sendInvites = function( siteId, usernamesOrEmails, role, 
 	}, fn );
 };
 
+Undocumented.prototype.createInviteValidation = function( siteId, usernamesOrEmails, role, fn ) {
+	debug( '/sites/:site_id:/invites/validate query' );
+	this.wpcom.req.post( '/sites/' + siteId + '/invites/validate', {}, {
+		invitees: usernamesOrEmails,
+		role: role
+	}, fn );
+};
+
 /**
  * GET/POST site settings
  *
@@ -1461,13 +1469,21 @@ Undocumented.prototype.themes = function( site, query, fn ) {
 	}, fn );
 };
 
+Undocumented.prototype.themeDetails = function( themeId, fn ) {
+	debug( '/themes/:theme_id' );
+	this.wpcom.req.get( {
+		apiVersion: '1.1',
+		path: '/themes/' + themeId
+	}, fn );
+};
+
 Undocumented.prototype.activeTheme = function( siteId, fn ) {
-	debug( '/site/:site_id/themes/mine' );
+	debug( '/sites/:site_id/themes/mine' );
 	this.wpcom.req.get( { path: '/sites/' + siteId + '/themes/mine' }, fn );
 };
 
 Undocumented.prototype.activateTheme = function( theme, siteId, fn ) {
-	debug( '/site/:site_id/themes/mine' );
+	debug( '/sites/:site_id/themes/mine' );
 	this.wpcom.req.post( {
 		path: '/sites/' + siteId + '/themes/mine',
 		body: { theme: theme.id }
@@ -1828,6 +1844,36 @@ Undocumented.prototype.submitSupportForumsTopic = function( subject, message, fn
 		path: '/help/forums/support/topics/new',
 		body: { subject, message }
 	}, fn );
+};
+
+/**
+ * Get the available export configuration settings for a site
+ *
+ * @param {int}       siteId            The site ID
+ * @param {Function}  fn                The callback function
+ * @returns {Promise} A promise that resolves when the request completes
+ * @api public
+ */
+Undocumented.prototype.getExportSettings = function( siteId, fn ) {
+	return this.wpcom.req.get( {
+		apiVersion: '1.1',
+		path: `/sites/${ siteId }/exports/settings`
+	}, fn );
+};
+
+/*
+ * Start an export
+ *
+ * @param {int}       siteId            The site ID
+ * @param {Object}    advancedSettings  Advanced export configuration
+ * @param {Function}  fn                The callback function
+ * @returns {Promise}                   A promise that resolves when the export started
+ */
+Undocumented.prototype.startExport = function( siteId, advancedSettings, fn ) {
+	return this.wpcom.req.post( {
+		apiVersion: '1.1',
+		path: `/sites/${ siteId }/exports/start`
+	}, advancedSettings, fn );
 };
 
 /**
